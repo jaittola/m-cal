@@ -1,0 +1,97 @@
+
+/* Styles for the site */
+h1, h2, h3, h4 {
+    font-family: 'PT Sans', Helvetica, Arial, sans-serif;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+h1 {
+    font-size: 20px;
+}
+
+h4 {
+    font-size: 14px;
+}
+
+p, input.contact, td, a.datepick-cmd, li {
+    font-family: 'PT Sans', Helvetica, Arial, sans-serif;
+    font-size: 14px
+}
+
+p.noReservations { font-style: italic }
+
+body {
+    background-image: url("http://www.merenkavijat.fi/wordpress/wp-content/themes/Avada/images/patterns/pattern9.png");
+    background-color: #d6d6d6;
+}
+
+div.errorBanner {
+    background-color: navy;
+    position: fixed;
+    width: 100%;
+    top: 30%;
+    opacity: 0.8;
+}
+
+p.appError {
+    font-family: 'PT Sans', Helvetica, Arial, sans-serif;
+    margin-top: 10px;
+    font-size: 25px;
+    font-style: italic;
+    color: red;
+    text-align: center;
+}
+
+div.title {
+    background-image: url("http://merenkavijat.fi/wordpress/wp-content/themes/Avada/images/bg-title.gif");
+    background-repeat: repeat-x;
+    background-position: 0% 50%;
+}
+
+div.container {
+    background-color: white;
+}
+
+/* Override the date picker style */
+
+.datepick-month a {
+    background-color: #ffffff;
+}
+.datepick-month span {
+    background-color: #eeeeee;
+}
+.datepick-month td .datepick-selected {
+    background-color: #66ff33;
+}
+.datepick-month td .datepick-highlight {
+    background-color: #fafafa;
+}
+.datepick-month td .datepick-selected-by-others {
+    background-color: #7f7fff;
+    color: #000000;
+    text-decoration: line-through;
+}
+.datepick-month-header, .datepick-month-header select, .datepick-month-header input {
+    width: auto;
+    height: auto;
+    font-weight: normal;
+    padding: 0px;
+    margin-bottom: 0px;
+}
+
+/* Styles to match the date picker for legend */
+td.outside-season {
+    color: #888;
+    background-color: #eeeeee;
+}
+td.free-date {
+    background-color: #ffffff;
+}
+td.my-selections {
+    background-color: #66ff33;
+}
+td.bookings-by-others {
+    background-color: #7f7fff;
+    color: #000000;
+}

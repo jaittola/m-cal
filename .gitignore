@@ -10,4 +10,6 @@ pom.xml.asc
 /.nrepl-port
 *~
 env
-
+.DS_Store
+/node_modules
+resources/public/js/bundle.*js

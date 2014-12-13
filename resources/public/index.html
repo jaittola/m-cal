@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>Särkän vartiovuorovaraukset</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="shortcut icon" href="img/m-ikoni.png"
+          type="image/x-icon" />
+
+    <!-- Fonts -->
+    <link href='//fonts.googleapis.com/css?family=PT+Sans:400,700,400italic,700italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+    <!-- Style sheets -->
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap-responsive.min.css">
+    <link rel="stylesheet" type="text/css" href="css/jquery-datepicker/smoothness.datepick.css">
+    <link rel="stylesheet" href="css/local.css">
+    <script src="js/vendor/modernizr-2.6.2.min.js"></script>
+  </head>
+  <body>
+    <!--[if lt IE 7]>
+        <p class="browsehappy">You are using an <strong>outdated</strong> browser.
+          Please <a href="http://browsehappy.com/">upgrade your browser</a> to
+          improve your experience.</p>
+        <![endif]-->
+
+    <div class="errorBanner" id="errorBanner"> </div>
+
+    <div class="container">
+
+      <div class="row">
+        <div class="span10 offset1">
+
+          <div class="row">
+            <div class="span10">
+
+              <img src="img/m-header_avada3.png"
+                   alt="Merenkävijät ry" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="span10">
+              <h1>Särkän vartiovuorovarausten demo</h1>
+            </div>
+          </div>
+
+          <div id="bookingContent">
+            <div class="row">
+              <div class="span10">
+                <h3>Ohjeet:</h3>
+
+                <ul>
+                  <li>Valitse kaksi vartiovuoroa kalenterinäkymästä.</li>
+                  <li>Syötä yhteystietosi kalenterinäkymän alapuolella oleviin kenttiin.</li>
+                  <li>Varaa vartiovuorot painamalla "Varaa vartiovuorot" -nappia.</li>
+                  <li>Järjestelmä lähettää sähköpostivahvistuksen antamaasi osoitteeseen. </li>
+                  <li>Jos vartiovuorojen varaamisessa on ongelmia, ota yhteyttä
+                    Merenkävijöiden toimistoon.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="row">
+              <div id="date-selection-header" class="span10">
+                <h3>Valitse vuorot:</h3>
+              </div>
+
+              <div id="date-selection" class="span5">
+                <div id="datepicker"></div>
+
+                <h3>Valitsemasi vuorot:</h3>
+
+                <div id="selectedDates">
+                </div>
+
+              </div>  <!-- date-selection -->
+
+              <div id="instructions" class="span5">
+                <p>
+                  Värien selitykset
+                </p>
+
+                <p>
+                  <table>
+                    <tr>
+                      <td class="outside-season">
+                        Vartiointikauden ulkopuolella tekstin ja taustan väri on
+                        harmaa.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="free-date">
+                        Vapaiden vartiovuorojen taustaväri on valkoinen.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="my-selections">
+                        Valitsemiesi vartiovuorojen taustaväri on vihreä.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="bookings-by-others">
+                        Muiden varaamien vartiovuorojen <del>teksti on yliviivattu</del> ja
+                        tausta on sininen.
+                      </td>
+                    </tr>
+                  </table>
+                </p>
+              </div>  <!-- instrucitons -->
+            </div>    <!-- row -->
+
+            <h3>Yhteystietosi:</h3>
+
+            <form method="post">
+
+              <div class="row">
+                <div class="span2"><p>Nimi: </p></div>
+                <div class="span4"><input class="contact" type="text" id="name" name="name"/> </div>
+                <div class="span4"> </div>
+              </div>
+              <div class="row">
+                <div class="span2"><p>Veneen nimi:</p> </div>
+                <div class="span4"><input class="contact" type="text" id="boat" name="boat"> </div>
+                <div class="span4"> </div>
+              </div>
+              <div class="row">
+                <div class="span2"><p>Sähköpostiosoite:</p> </div>
+                <div class="span4"><input class="contact" type="email" id="email" name="email"/> </div>
+                <div class="span4"> </div>
+              </div>
+
+              <div class="row">
+                <div class="span8 offset2">
+                  <p>
+                    <input class="contact" type="button" id="doBooking" value="Varaa vartiovuorot" disabled />
+                  </p>
+                </div>
+              </div>
+            </form>
+          </div>   <!-- bookingContent  -->
+
+          <div id="confirmationContent" class="row">
+          </div>
+        </div> <!-- row, outermost -->
+      </div>
+    </div>  <!-- container -->
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.10.2.min.js"><\/script>')</script>
+    <script type="text/javascript" src="js/vendor/jquery.plugin.min.js"></script>
+    <script type="text/javascript" src="js/vendor/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/vendor/jquery.datepick.min.js"></script>
+    <script type="text/javascript" src="js/vendor/jquery.datepick-fi.js"></script>
+    <script type="text/javascript" src="js/bundle.min.js"></script>
+  </body>
+</html>
