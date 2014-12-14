@@ -20,5 +20,6 @@
   :ring {:init m-cal.handler/setup
          :handler m-cal.handler/app}
   :uberjar-name "m-cal-standalone.jar"
-  :profiles {:production {:env {:production true}}}
+  :profiles {:production {:env {:production true}}
+             :uberjar {:aot :all}}
 )
