@@ -17,7 +17,8 @@
   :plugins [[lein-ring "0.8.11"]
             [lein-ancient "0.5.5"]]
   :min-lein-version "2.5.0"
-  :ring {:handler m-cal.handler/app}
+  :ring {:init m-cal.handler/setup
+         :handler m-cal.handler/app}
   :uberjar-name "m-cal-standalone.jar"
   :profiles {:production {:env {:production true}}}
 )

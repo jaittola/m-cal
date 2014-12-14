@@ -6,9 +6,8 @@
             [ring.util.response :as resp]
             [ring.adapter.jetty :as jetty]
             [environ.core :refer [env]]
-            [m-cal.google-cal-api :as cal :refer (list-bookings
-                                                  setup-crypto)]
-            [m-cal.bookings :as bookings :refer (insert-bookings)]))
+            [m-cal.google-cal-api :as cal]
+            [m-cal.bookings :as bookings]))
 
 (defn api-routes
   []
@@ -27,6 +26,11 @@
       (middleware/wrap-json-body)
       (middleware/wrap-json-response)))
 
+(defn setup
+  []
+  (cal/setup))
+
 (defn -main [& [port]]
+  (setup)
   (let [port (Integer. (or port (env :port) 5000))]
     (jetty/run-jetty (handler/site #'app) {:port port :join? false})))

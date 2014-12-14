@@ -23,8 +23,9 @@
 (def serviceAccountEmail (System/getenv "SERVICE_ACCOUNT_EMAIL"))
 (def calendarId (System/getenv "CALENDAR_ID"))
 (def privateKey (System/getenv "CALENDAR_PRIVATE_KEY"))
+(def parsed-private-key (atom ""))
 
-(defn setup-crypto
+(defn setup
   []
   (Security/addProvider (BouncyCastleProvider.)))
 
@@ -35,25 +36,29 @@
         converter (.. (JcaPEMKeyConverter.) (setProvider "BC"))]
     (. converter getPrivateKey (. pemParser readObject))))
 
-(defn authenticated-calendar
+(defn private-key
+  []
+  (when (= @parsed-private-key "")
+    (compare-and-set! parsed-private-key "" (read-pem-private-key)))
+  @parsed-private-key)
+
+(defn calendar
   []
   (let
       [credential (.. (GoogleCredential$Builder.)
                       (setTransport httpTransport)
                       (setJsonFactory jsonFactory)
                       (setServiceAccountId serviceAccountEmail)
-                      (setServiceAccountPrivateKey (read-pem-private-key))
+                      (setServiceAccountPrivateKey (private-key))
                       (setServiceAccountScopes (Collections/singleton CalendarScopes/CALENDAR))
                       (build))]
     (.. (Calendar$Builder. httpTransport jsonFactory credential)
         (setApplicationName applicationName)
         (build))))
 
-(def default-calendar (do (setup-crypto) (authenticated-calendar)))
-
 (defn print-calendar-list
   []
-  (let [calendars (.. default-calendar
+  (let [calendars (.. (calendar)
                       (calendarList)
                       (list)
                       (execute)
@@ -64,7 +69,7 @@
 
 (defn get-bookings
   []
-  (.. default-calendar
+  (.. (calendar)
       (events)
       (list calendarId)
       (execute)
@@ -99,7 +104,7 @@
       (.setStart event-date)
       (.setEnd event-date)
       (.setStatus "confirmed"))
-    (.. default-calendar
+    (.. (calendar)
         (events)
         (insert calendarId event)
         (execute))))
