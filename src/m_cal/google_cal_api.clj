@@ -24,6 +24,7 @@
 (def calendarId (System/getenv "CALENDAR_ID"))
 (def privateKey (System/getenv "CALENDAR_PRIVATE_KEY"))
 (def parsed-private-key (atom ""))
+(def calendar-lock (java.lang.Object.))
 
 (defn setup
   []
@@ -68,16 +69,22 @@
         (println calendar)))))
 
 (defn get-bookings
-  []
-  (.. (calendar)
+  [cal]
+  (.. cal
       (events)
       (list calendarId)
       (execute)
       (getItems)))
 
+(defn bookings-contain
+  [candidate-dates bookings]
+  (letfn [(date-is-in [d]
+            (not-empty (filter #(= d %) candidate-dates)))]
+    (not-empty (filter date-is-in (map #(:date %) bookings)))))
+
 (defn list-bookings
-  []
-  (let [bookings (get-bookings)]
+  [& [cal]]
+  (let [bookings (get-bookings (or cal (calendar)))]
     (map #(hash-map :description (. % getDescription)
                     :name (. % getSummary)
                     :date (.. % getStart getDate toString))
@@ -95,7 +102,7 @@
     (. (EventDateTime.) (setDate (DateTime. booking-date))))
 
 (defn add-booking
-  [booking-date name email boat]
+  [cal booking-date name email boat]
   (let [event (Event.)
         event-date (make-event-date booking-date)]
     (doto event
@@ -104,7 +111,7 @@
       (.setStart event-date)
       (.setEnd event-date)
       (.setStatus "confirmed"))
-    (.. (calendar)
+    (.. cal
         (events)
         (insert calendarId event)
         (execute))))
@@ -114,9 +121,18 @@
     name "name"
     email "email"
     boat "boat"}]
-  (let [booking-results (doall (map #(add-booking % name email boat) dates))]
-    {:body {:result "Ok"
-            :name name
-            :email email
-            :boat boat
-            :dates dates}}))
+  (locking calendar-lock
+    (let [cal (calendar)
+          bookings (list-bookings cal)
+          conflicting-dates (bookings-contain dates bookings)]
+      (if conflicting-dates
+        {:status 409   ;; conflict
+         :body {:result "Nok"
+                :alreadyBookedDates bookings}}
+        (do (doall (map #(add-booking cal % name email boat) dates))
+            (println "Returning results")
+            {:body {:result "Ok"
+                    :name name
+                    :email email
+                    :boat boat
+                    :dates dates}})))))

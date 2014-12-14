@@ -17,6 +17,7 @@ function setupBookings() {
         confirmation: require("../templates/confirmation.handlebars"),
         error: require("../templates/error.handlebars"),
         selectedDates: require("../templates/selectedDates.handlebars"),
+        conflict: require("../templates/conflict.handlebars")
     }
 
     var formFields = [
@@ -69,15 +70,46 @@ function setupBookings() {
                 dataType: "json"
             })
             .fail(function(jqXHR) {
-                showError("Varausten tallettaminen epäonnistui. Yritä myöhemmin uudelleen tai " +
-                          "ota yhteyttä Merenkävijöiden toimistoon.",
-                          jqXHR)
+                if (!(jqXHR.status == 409 && handleDateConflict(jqXHR))) {
+                    showError("Varausten tallettaminen epäonnistui. Yritä myöhemmin uudelleen tai " +
+                              "ota yhteyttä Merenkävijöiden toimistoon.",
+                              jqXHR)
+                }
             })
             .done(showConfirmation)
         })
     }
 
+    function handleDateConflict(jqXHR) {
+        if (jqXHR.responseJSON && jqXHR.responseJSON.alreadyBookedDates) {
+            var updatedBookings = jqXHR.responseJSON.alreadyBookedDates
+            updateBookings(updatedBookings)
+            var selections = _.reject(
+                selectedDates, function(d) {
+                    return _.has(bookedDates, toMachineDate(d))
+                })
+            $("#datepicker").datepick("clear")
+            $("#datepicker").datepick
+                .apply($("#datepicker"), _.flatten(["setDate", selections]))
+            $("#conflict")
+                .empty()
+                .html(templates.conflict({ errorMessage: "Valitsemasi päivä olikin " +
+                                           "jo varattu. Tarkista valintasi." }))
+            $("#bookingContent").show()
+            return true
+        }
+        return false
+    }
+
+    function selectDates(dates) {
+        selectedDates = dates
+        showSelectedDates(selectedDates)
+        dateValidatorBus.push(dates.length ===
+                              bookingParams.numberOfBookings)
+    }
+
     function setupDatepicker() {
+        $("#datepicker").empty()
         $("#datepicker").datepick({
             minDate: bookingParams.firstDate,
             maxDate: bookingParams.lastDate,
@@ -94,13 +126,6 @@ function setupBookings() {
                     selectable: false,
                 }
             return {}
-        }
-
-        function selectDates(dates) {
-            selectedDates = dates
-            showSelectedDates(selectedDates)
-            dateValidatorBus.push(dates.length ===
-                                  bookingParams.numberOfBookings)
         }
 
         showSelectedDates(selectedDates)

@@ -16,10 +16,15 @@ h4 {
 
 p, input.contact, td, a.datepick-cmd, li {
     font-family: 'PT Sans', Helvetica, Arial, sans-serif;
-    font-size: 14px
+    font-size: 14px;
 }
 
 p.noReservations { font-style: italic }
+
+p.conflict {
+    font-style: italic;
+    color: red;
+}
 
 body {
     background-image: url("http://www.merenkavijat.fi/wordpress/wp-content/themes/Avada/images/patterns/pattern9.png");
