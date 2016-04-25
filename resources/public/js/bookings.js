@@ -4,8 +4,8 @@ var _ = require("underscore")
 
 function setupBookings() {
     var bookingParams = {
-        firstDate: parseDate("2014-11-29"),
-        lastDate: parseDate("2014-12-31"),
+        firstDate: parseDate("2016-05-01"),
+        lastDate: parseDate("2016-10-02"),
         numberOfBookings: 2
     }
 
