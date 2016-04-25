@@ -3,6 +3,9 @@ PD=resources/public
 JSD=$(PD)/js
 HANDLEBARS_TEMPLATES=$(wildcard $(PD)/templates/*.handlebars)
 
+PATH:=$(shell pwd)/node_modules/.bin:$(PATH)
+export PATH
+
 all: $(JSD)/bundle.min.js
 
 clean:
