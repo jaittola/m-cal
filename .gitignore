@@ -1,4 +1,5 @@
 conf-env
+/*.log
 /target
 /lib
 /classes
@@ -14,3 +15,7 @@ env
 .DS_Store
 /node_modules
 resources/public/js/bundle.*js
+/*-init.clj
+/resources/public/js
+out
+resources/public/css/site.css

@@ -1,59 +1,65 @@
 # m-cal
 
-This application provides a simple booking service, using Google
-Calendar as the back-end. The Web UI has a design that mimics the
-look-and-feel of the website of yacht club Merenkävijät
-(http://www.merenkavijat.fi/) (in a somewhat crappy way).
-
-## Prerequisites
-
- * Install Leiningen
- * Install node.js
- * In your Google account,
-   * create a service account for Calendar in the Google console
-   * create a calendar, and share it with read/write access with the
-     service account that you just created
-
-## Setting up
-
- * Set up the following environment variables based on the account
-   information at Google:
-
-     `SERVICE_ACCOUNT_EMAIL`  : The e-mail address of your service account at Google
+This application provides a simple booking service for a yacht club's
+night watch duties. Every yacht owner must be a night watch for a
+couple of times during the summer.
 
 
-     `CALENDAR_ID`            : The ID of the calendar to use
 
-     `CALENDAR_PRIVATE_KEY`   : The private key of your calendar in pkcs8 format. You can use
-                                OpenSSL to convert Google's .p12 file to pkcs8 format.
-                                TODO, how to exactly.
+## ClojureScript development instructions
 
- * To install client-side dependencies, run
+The instructions originate from a [reagent project template](https://github.com/reagent-project/reagent).
 
-    `make deps`
+### cljs-devtools
 
- * To build the client-side code, run
+To enable:
 
-    `make all`
+1. Open Chrome's DevTools,`Ctrl-Shift-i`
+2. Open "Settings", `F1`
+3. Check "Enable custom formatters" under the "Console" section
+4. close and re-open DevTools
 
- * To run the application, run either
+### Start Cider from Emacs:
 
-    `lein ring server`
+Put this in your Emacs config file:
 
-    or
+```
+(setq cider-cljs-lein-repl "(do (use 'figwheel-sidecar.repl-api) (start-figwheel!) (cljs-repl))")
+```
 
-    `make run`
+Navigate to a clojurescript file and start a figwheel REPL with `cider-jack-in-clojurescript` or (`C-c M-J`)
 
- * The Makefile contains also other targets that may be useful for you.
+### Compile css:
 
-## Deployment
+Compile css file once.
 
- * This application can be deployed to Heroku:
+```
+lein less once
+```
 
-   * Set up an application to Heroku
-   * Set up the environment variables in Heroku configuration
-   * Perform the client-side build
-   * Run 'make publish' to push your code to Heroku.
+Automatically recompile css file on change.
+
+```
+lein less auto
+```
+
+### Run application:
+
+```
+lein clean
+lein figwheel dev
+```
+
+Figwheel will automatically push cljs changes to the browser.
+
+Wait a bit, then browse to [http://localhost:3449](http://localhost:3449).
+
+## Production Build
+
+```
+lein clean
+lein cljsbuild once min
+```
 
 ## License
 
