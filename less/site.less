@@ -1,3 +1,115 @@
-body {
-    font-size:20px;
+
+@h2_font_size: 2rem;
+@font_size: 1.2rem;
+@font_family: serif;
+
+@calendar_cell_padding: 4px;
+@calendar_cell_button_padding: 2px;
+@select_button_padding: 0.8rem;
+
+@error_color: #ffcccc;
+@free_calendar_color: #f0f0f0;
+@taken_calendar_color: #e0e0e0;
+@sunday_border_bottom_color: black;
+@day_border_bottom_color: #cfcfcf;
+
+
+html {
+    -webkit-text-size-adjust: none;
+}
+
+input, div, p, li, button {
+    font-size: @font_size;
+    font-family: @font_family;
+}
+
+h2 {
+    font-size: @h2_font_size;
+    font-weight: bold;
+}
+
+h3 {
+    font-size: @font_size;
+    font-weight: bold;
+}
+
+button {
+    font-size: @font_size;
+}
+
+.selected_days_area, .contact_entry {
+    display: flex;
+    display: -ms-flexbox;
+    flex-flow: row wrap;
+    -ms-flex-flow: row wrap;
+}
+
+.selected_days_title, .contact_title {
+    flex: 0 1 15em;
+    -ms-flex: 0 1 15em;
+}
+
+.selected_days_selections {
+    flex: 2 0 auto;
+    -ms-flex: 2 0 auto;
+    flex-flow: column nowrap;
+    -ms-flex-flow: column nowrap;
+}
+
+.contact_input {
+    flex: 2 0 auto;
+    -ms-flex: 2 0 auto;
+}
+
+.contact_input_bad {
+    flex: 2 0 auto;
+    -ms-flex: 2 0 auto;
+    background-color: @error_color;
+}
+
+.select_button_container {
+    padding-top: @select_button_padding;
+}
+
+.calendar-container {
+    display: flex;
+    display: -ms-flexbox;
+    flex-flow: row wrap;
+    -ms-flex-flow: row wrap;
+}
+
+.calendar-month-table {
+    border-spacing: 0px;
+    padding-right: 10px;
+}
+
+.calendar-date-cell, .calendar-booking-cell {
+    padding-left: @calendar_cell_padding;
+    padding-right: @calendar_cell_padding;
+    height: 2.5em;
+    min-width: 5em;
+    padding-top: @calendar_cell_padding;
+    padding-bottom: @calendar_cell_padding;
+
+    button {
+        padding-top: @calendar_cell_button_padding;
+        padding-bottom: @calendar_cell_button_padding;
+    }
+
+}
+
+.calendar-day {
+    border-bottom: 1px solid @day_border_bottom_color;
+}
+
+.calendar-sunday {
+    border-bottom: 1px solid black;
+}
+
+.calendar-free {
+    background-color: @free_calendar_color;
+}
+
+.calendar-taken {
+    background-color: @taken_calendar_color;
 }
