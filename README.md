@@ -4,7 +4,29 @@ This application provides a simple booking service for a yacht club's
 night watch duties. Every yacht owner must be a night watch for a
 couple of times during the summer.
 
+## Environment variables
 
+You can specify environment variables to protect the user interface with HTTP Basic-Auth.
+
+```
+# For local testing only
+export BOOKING_USERNAME=user
+export BOOKING_PASSWORD=password
+export BOOKING_REALM="Vartiovuorovaraukset"
+
+# To run with these variables, you can run
+BOOKING_USERNAME=user BOOKING_PASSWORD=password BOOKING_REALM="Varaukset" lein ring server
+```
+
+## Clojure development instructions
+
+Run
+
+```
+lein ring server
+```
+
+Then point your web browser to http://localhost:3000
 
 ## ClojureScript development instructions
 
