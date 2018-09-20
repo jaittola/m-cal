@@ -1,7 +1,7 @@
 (defproject m-cal "0.1.0-SNAPSHOT"
-  :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.946"]
-                 [reagent "0.7.0"]
+  :dependencies [[org.clojure/clojure "1.9.0"]
+                 [org.clojure/clojurescript "1.10.339"]
+                 [reagent "0.8.1"]
                  [com.andrewmcveigh/cljs-time "0.5.2"]]
 
   :min-lein-version "2.5.3"
