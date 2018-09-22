@@ -207,8 +207,15 @@
                             (doall))]]])))
            (doall))]]))
 
+(defn logout-link []
+  [:div.logout_header
+   [:div.push_right]
+   [:div.logout_link
+    [:a {:href "logout"} "Kirjaudu ulos"]]])
+
 (defn page [ratom]
   [:div
+   [logout-link]
    [:div.header]
    [:h1 "Merenkävijät ry"]
    [:h2 "Särkän vartiovuorojen varaukset"]
