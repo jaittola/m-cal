@@ -19,3 +19,4 @@ resources/public/js/bundle.*js
 /resources/public/js
 out
 resources/public/css/site.css
+/local-database

@@ -28,6 +28,28 @@ lein ring server
 
 Then point your web browser to http://localhost:3000
 
+## Setting up a development database
+
+This application uses PostgreSQL for storing the bookings. To create a
+temporary PostgreSQL database for development work, run the command
+
+```
+src/db/scripts/00-CREATE.sh
+```
+
+You can delete this database by running
+
+```
+src/db/scripts/stop_db.sh local-database
+rm -rf local-database psql.log
+```
+
+To connect to this database using psql, run
+
+```
+psql postgresql://mcal@localhost/mcaldb
+```
+
 ## ClojureScript development instructions
 
 The instructions originate from a [reagent project template](https://github.com/reagent-project/reagent).
