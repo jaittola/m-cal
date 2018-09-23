@@ -3,16 +3,17 @@
 @font_size: 1.2rem;
 @font_family: serif;
 
+@area_padding: 10px;
 @calendar_cell_padding: 4px;
 @calendar_cell_button_padding: 2px;
 @select_button_padding: 0.8rem;
 
+@success_color: #60d360;
 @error_color: #ffcccc;
 @free_calendar_color: #f0f0f0;
 @taken_calendar_color: #e0e0e0;
 @sunday_border_bottom_color: black;
 @day_border_bottom_color: #cfcfcf;
-
 
 html {
     -webkit-text-size-adjust: none;
@@ -54,6 +55,18 @@ button {
 .logout_link {
     flex: 0 1 auto;
     -ms-flex: 0 1 auto;
+}
+
+.error_status_area {
+    margin-top: @area_padding;
+    padding: @area_padding;
+    background-color: @error_color;
+}
+
+.success_status_area {
+    margin-top: @area_padding;
+    padding: @area_padding;
+    background-color: @success_color;
 }
 
 .selected_days_area, .contact_entry {

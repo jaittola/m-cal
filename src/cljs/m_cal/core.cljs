@@ -24,15 +24,26 @@
                  :first-date "2018-05-12"
                  :last-date "2018-12-31"
                  :booked-dates []
-                 :error-status nil}))
+                 :error-status nil
+                 :success-status nil}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Utilities for maintaining the state and input validation
+
+(defn set-error-status [new-status]
+  (swap! app-state assoc :error-status new-status :success-status nil))
+
+(defn set-success-status [new-status]
+  (swap! app-state assoc :error-status nil :success-status new-status))
+
+(defn clear-statuses []
+  (swap! app-state assoc :error-status nil :success-status nil))
 
 (defn update-state-from-text-input [field on-change-event]
   (swap! app-state assoc field (-> on-change-event .-target .-value)))
 
 (defn add-date-selection [date]
+  (clear-statuses)
   (swap! app-state (fn [state new-date]
                      (->> (conj (:selected_days state) new-date)
                           (distinct)
@@ -40,6 +51,7 @@
          date))
 
 (defn remove-date-selection [date]
+  (clear-statuses)
   (swap! app-state (fn [state new-date]
                      (->> (filter #(not (= date %)) (:selected_days state))
                           (assoc state :selected_days)))
@@ -47,9 +59,6 @@
 
 (defn set-booked-dates [new-dates]
   (swap! app-state assoc :booked-dates new-dates))
-
-(defn set-error-status [new-status]
-  (swap! app-state assoc :error-status new-status))
 
 (defn simple-input-validation [value]
   (let [string-len (count value)]
@@ -84,6 +93,7 @@
         (if bookings
           (set-booked-dates bookings)
           (do
+            (js/console.log "ERROR ERROR")
             (set-booked-dates [])
             (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen"))))))
 
@@ -156,6 +166,18 @@
    [:button.selection
     { :disabled (not (all-input-validates ratom)) }
     "Varaa valitsemasi vuorot"]])
+
+(defn status-area [status-property class ratom]
+   (let [status (status-property @ratom)]
+     (if (some? status)
+       [:div {:class class} status]
+       [:div])))
+
+(defn success_status_area [ratom]
+  [status-area :success-status "success_status_area" ratom])
+
+(defn error_status_area [ratom]
+  [status-area :error-status "error_status_area" ratom])
 
 (defn find-booking-for [bookings day]
   (first (filter #(== (:isoformat day) (:date %)) bookings)))
@@ -245,6 +267,8 @@
    [contact_entry ratom]
    [selection_area ratom]
    [selection_button_area ratom]
+   [success_status_area ratom]
+   [error_status_area ratom]
    [render-calendar ratom]
    ])
 
