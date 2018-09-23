@@ -1,9 +1,11 @@
 (ns m-cal.core
-  (:require
-   [reagent.core :as reagent]
-   [clojure.string :as string]
-   [cljs-time.core :as time]
-   [m-cal.utils :as u]))
+  (:require [reagent.core :as reagent]
+            [clojure.string :as string]
+            [cljs-time.core :as time]
+            [cljs-http.client :as http]
+            [cljs.core.async :refer [<!]]
+            [m-cal.utils :as u])
+  (:require-macros [cljs.core.async.macros :refer [go]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vars
@@ -20,8 +22,9 @@
                  :email ""
                  :yacht-name ""
                  :first-date "2018-05-12"
-                 :last-date "2018-10-10"
-                 :booked-dates []}))
+                 :last-date "2018-12-31"
+                 :booked-dates []
+                 :error-status nil}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Utilities for maintaining the state and input validation
@@ -41,6 +44,12 @@
                      (->> (filter #(not (= date %)) (:selected_days state))
                           (assoc state :selected_days)))
          date))
+
+(defn set-booked-dates [new-dates]
+  (swap! app-state assoc :booked-dates new-dates))
+
+(defn set-error-status [new-status]
+  (swap! app-state assoc :error-status new-status))
 
 (defn simple-input-validation [value]
   (let [string-len (count value)]
@@ -64,6 +73,19 @@
                 (simple-input-validation (:yacht-name @ratom))
                 (email-input-validation (:email @ratom))])
        (>= (count (:selected_days @ratom)) (:required_days @ratom))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; HTTP calls to the booking API
+
+(defn load-bookings []
+  (go (let [response (<! (http/get "/bookings/api/1/bookings"))
+            bookings (when (= (:status response) 200)
+                       (:bookings (:body response)))]
+        (if bookings
+          (set-booked-dates bookings)
+          (do
+            (set-booked-dates [])
+            (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen"))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Page
@@ -173,8 +195,8 @@
         booked-dates (:booked-dates @ratom)
         today (time/now)
         bookings (map (fn [booking]
-                        {:date (:date booking)
-                         :bookee [:div (:name booking) [:br] (:yacht-name booking)]})
+                        {:date (:booked_date booking)
+                         :bookee [:div (:name booking) [:br] (:yachtname booking)]})
                       booked-dates)]
     [:div.calendar-area
      [:h2 "Varauskalenteri"]
@@ -236,6 +258,7 @@
     ))
 
 (defn reload []
+  (load-bookings)
   (reagent/render [page app-state]
                   (.getElementById js/document "app")))
 
