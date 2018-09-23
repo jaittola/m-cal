@@ -4,6 +4,7 @@
 @font_family: serif;
 
 @area_padding: 10px;
+@area_vertical_margin: 2px;
 @calendar_cell_padding: 4px;
 @calendar_cell_button_padding: 2px;
 @select_button_padding: 0.8rem;
@@ -74,6 +75,7 @@ button {
     display: -ms-flexbox;
     flex-flow: row wrap;
     -ms-flex-flow: row wrap;
+    margin-bottom: @area_vertical_margin;
 }
 
 .selected_days_title, .contact_title {
