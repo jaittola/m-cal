@@ -6,16 +6,22 @@ couple of times during the summer.
 
 ## Environment variables
 
-You can specify environment variables to protect the user interface with HTTP Basic-Auth.
+You can specify environment variables to protect the user interface
+with HTTP Basic-Auth. You also need PG_URI, which contains the
+PostgreSQL database connection URI, in your environment. If you need a
+database, section "Setting up a development database" below gives
+instrutions on setting up a database for development work easily.
 
 ```
-# For local testing only
+export PG_URI "postgresql://mcal@localhost/mcaldb"
+
+# These values are for local testing only
 export BOOKING_USERNAME=user
 export BOOKING_PASSWORD=password
 export BOOKING_REALM="Vartiovuorovaraukset"
 
 # To run with these variables, you can run
-BOOKING_USERNAME=user BOOKING_PASSWORD=password BOOKING_REALM="Varaukset" lein ring server
+PG_URI "postgresql://mcal@localhost/mcaldb" BOOKING_USERNAME=user BOOKING_PASSWORD=password BOOKING_REALM="Varaukset" lein ring server
 ```
 
 ## Clojure development instructions

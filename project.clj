@@ -9,7 +9,11 @@
                  [ring/ring-json "0.4.0"]
                  [ring-basic-authentication "1.0.5"]
                  [compojure "1.6.1"]
-                 [environ "1.1.0"]]
+                 [environ "1.1.0"]
+                 [com.layerware/hugsql "0.4.9"]
+                 [org.postgresql/postgresql "42.2.2"]
+                 [org.clojure/java.jdbc "0.7.8"]
+                 [clojure.jdbc/clojure.jdbc-c3p0 "0.3.3"]]
 
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-less "1.7.5"]
@@ -20,6 +24,7 @@
   :ring {:init m-cal.handler/setup
          :handler m-cal.handler/app}
   :source-paths ["src/clj"]
+  :resource-paths [ "resources" "src/db/queries" ]
   :main m-cal.handler
 
 

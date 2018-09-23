@@ -6,7 +6,8 @@
             [ring.util.response :as resp]
             [ring.adapter.jetty :as jetty]
             [ring.middleware.basic-authentication :as basicauth]
-            [environ.core :refer [env]])
+            [environ.core :refer [env]]
+            [m-cal.bookings :as bookings])
   (:gen-class))
 
 (defn get-auth-params []
@@ -40,6 +41,8 @@
   (GET "/index" [] (resp/file-response "resources/public/index.html"))
   (ANY "/logout" [] {:status 401
                      :body "Olet kirjautunut ulos."})
+  (GET "/api/1/bookings" [] (bookings/list-bookings))
+  (POST "/api/1/bookings" [:as {body :body}] (bookings/insert-booking body))
   (route/resources "/")
   )
 
@@ -54,7 +57,7 @@
     (routes
      (-> (context "/bookings" []
                   (wrap-basicauth-if-auth-params booking-routes (get-auth-params)))
-         (middleware/wrap-json-body)
+         (middleware/wrap-json-body {:keywords? true})
          (middleware/wrap-json-response))
      (-> other-routes
          (middleware/wrap-json-body)
