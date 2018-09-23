@@ -30,7 +30,8 @@
 
   :clean-targets ^{:protect false} ["resources/public/js"
                                     "target"]
-  :figwheel {:css-dirs ["resources/public/css"]}
+  :figwheel {:ring-handler m-cal.handler/app
+             :css-dirs ["resources/public/css"]}
   :less {:source-paths ["less"]
          :target-path  "resources/public/css"}
 
