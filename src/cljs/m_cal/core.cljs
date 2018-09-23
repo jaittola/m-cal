@@ -25,7 +25,8 @@
                  :last-date "2018-12-31"
                  :booked-dates []
                  :error-status nil
-                 :success-status nil}))
+                 :success-status nil
+                 :request-in-progress false}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Utilities for maintaining the state and input validation
@@ -60,6 +61,21 @@
 (defn set-booked-dates [new-dates]
   (swap! app-state assoc :booked-dates new-dates))
 
+(defn clear-user []
+  (swap! app-state assoc
+         :selected_days []
+         :name ""
+         :email ""
+         :yacht-name ""))
+
+(defn clear-selected-days []
+  (swap! app-state assoc
+         :selected_days []))
+
+(defn set-request-in-progress [in-progress]
+  (swap! app-state assoc
+         :request-in-progress in-progress))
+
 (defn simple-input-validation [value]
   (let [string-len (count value)]
     (cond
@@ -93,9 +109,32 @@
         (if bookings
           (set-booked-dates bookings)
           (do
-            (js/console.log "ERROR ERROR")
             (set-booked-dates [])
             (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen"))))))
+
+(defn save-bookings [ratom]
+  (go (do
+        (set-request-in-progress true)
+        (let [response (<! (http/post "/bookings/api/1/bookings"
+                                      {:json-params {:name (:name @ratom)
+                                                     :email (:email @ratom)
+                                                     :yacht_name (:yacht-name @ratom)
+                                                     :booked_dates (:selected_days @ratom)}}))
+              status (:status response)
+              bookings (:all_bookings (:body response))]
+          (set-request-in-progress false)
+          (when bookings
+            (set-booked-dates bookings))
+          (case status
+            200 (do
+                  (clear-user)
+                  (set-success-status "Varauksesi on talletettu. Varausvahvistus on lähetetty sähköpostiisi. Varausvahvistuksessa on linkki, jota voit käyttää varaustesi muokkaamiseen."))
+            409 (do
+                  (clear-selected-days)
+                  (set-error-status "Joku muu ehti valita samat päivät kuin sinä. Valitse uudet päivät."))
+            (do
+              (clear-user)
+              (set-error-status "Varauksien tallettaminen epäonnistui. Yritä myöhemmin uudelleen.")))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Page
@@ -163,8 +202,10 @@
 
 (defn selection_button_area [ratom]
   [:div.select_button_container
-   [:button.selection
-    { :disabled (not (all-input-validates ratom)) }
+   [:button.selection {:disabled (or
+                                  (:request-in-progress @ratom)
+                                  (not (all-input-validates ratom)))
+                       :on-click #(save-bookings ratom)}
     "Varaa valitsemasi vuorot"]])
 
 (defn status-area [status-property class ratom]
