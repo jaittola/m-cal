@@ -6,7 +6,7 @@ b.id,
 TO_CHAR(b.booked_date, 'YYYY-MM-DD') as booked_date,
 b.users_id as user_id,
 u.username as name,
-u.yachtname
+u.yachtname as yacht_name
 FROM booking b
 JOIN users u ON u.id = b.users_id
 ORDER BY booked_date;
@@ -14,7 +14,7 @@ ORDER BY booked_date;
 -- :name db-insert-user :<!
 -- :doc Insert a user into the database
 INSERT INTO users (username, yachtname, email)
-VALUES (:name, :yachtname, :email)
+VALUES (:name, :yacht_name, :email)
 RETURNING id, secret_id;
 
 -- :name db-insert-booking :<!
@@ -34,6 +34,6 @@ RETURNING id;
 UPDATE users
 SET
 username = :name,
-yachtname = :yachtname,
+yachtname = :yacht_name,
 email = :email
 WHERE id = :id;

@@ -17,28 +17,28 @@
 
 (defonce app-state
   (reagent/atom {:required_days 2
-                 :selected_days []
+                 :selected_dates []
                  :name ""
                  :email ""
-                 :yacht-name ""
-                 :first-date "2018-05-12"
-                 :last-date "2018-12-31"
-                 :booked-dates []
-                 :error-status nil
-                 :success-status nil
-                 :request-in-progress false}))
+                 :yacht_name ""
+                 :first_date "2018-05-12"
+                 :last_date "2018-12-31"
+                 :booked_dates []
+                 :error_status nil
+                 :success_status nil
+                 :request_in_progress false}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Utilities for maintaining the state and input validation
 
 (defn set-error-status [new-status]
-  (swap! app-state assoc :error-status new-status :success-status nil))
+  (swap! app-state assoc :error_status new-status :success_status nil))
 
 (defn set-success-status [new-status]
-  (swap! app-state assoc :error-status nil :success-status new-status))
+  (swap! app-state assoc :error_status nil :success_status new-status))
 
 (defn clear-statuses []
-  (swap! app-state assoc :error-status nil :success-status nil))
+  (swap! app-state assoc :error_status nil :success_status nil))
 
 (defn update-state-from-text-input [field on-change-event]
   (swap! app-state assoc field (-> on-change-event .-target .-value)))
@@ -46,35 +46,35 @@
 (defn add-date-selection [date]
   (clear-statuses)
   (swap! app-state (fn [state new-date]
-                     (->> (conj (:selected_days state) new-date)
+                     (->> (conj (:selected_dates state) new-date)
                           (distinct)
-                          (assoc state :selected_days)))
+                          (assoc state :selected_dates)))
          date))
 
 (defn remove-date-selection [date]
   (clear-statuses)
   (swap! app-state (fn [state new-date]
-                     (->> (filter #(not (= date %)) (:selected_days state))
-                          (assoc state :selected_days)))
+                     (->> (filter #(not (= date %)) (:selected_dates state))
+                          (assoc state :selected_dates)))
          date))
 
 (defn set-booked-dates [new-dates]
-  (swap! app-state assoc :booked-dates new-dates))
+  (swap! app-state assoc :booked_dates new-dates))
 
 (defn clear-user []
   (swap! app-state assoc
-         :selected_days []
+         :selected_dates []
          :name ""
          :email ""
-         :yacht-name ""))
+         :yacht_name ""))
 
 (defn clear-selected-days []
   (swap! app-state assoc
-         :selected_days []))
+         :selected_dates []))
 
 (defn set-request-in-progress [in-progress]
   (swap! app-state assoc
-         :request-in-progress in-progress))
+         :request_in_progress in-progress))
 
 (defn simple-input-validation [value]
   (let [string-len (count value)]
@@ -95,9 +95,9 @@
 (defn all-input-validates [ratom]
   (and (every? #(= :good %)
                [(simple-input-validation (:name @ratom))
-                (simple-input-validation (:yacht-name @ratom))
+                (simple-input-validation (:yacht_name @ratom))
                 (email-input-validation (:email @ratom))])
-       (>= (count (:selected_days @ratom)) (:required_days @ratom))))
+       (>= (count (:selected_dates @ratom)) (:required_days @ratom))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; HTTP calls to the booking API
@@ -105,7 +105,7 @@
 (defn load-bookings []
   (go (let [response (<! (http/get "/bookings/api/1/bookings"))
             bookings (when (= (:status response) 200)
-                       (:bookings (:body response)))]
+                       (:all_bookings (:body response)))]
         (if bookings
           (set-booked-dates bookings)
           (do
@@ -118,8 +118,8 @@
         (let [response (<! (http/post "/bookings/api/1/bookings"
                                       {:json-params {:name (:name @ratom)
                                                      :email (:email @ratom)
-                                                     :yacht_name (:yacht-name @ratom)
-                                                     :booked_dates (:selected_days @ratom)}}))
+                                                     :yacht_name (:yacht_name @ratom)
+                                                     :selected_dates (:selected_dates @ratom)}}))
               status (:status response)
               bookings (:all_bookings (:body response))]
           (set-request-in-progress false)
@@ -171,9 +171,9 @@
    [:div.contact_entry
     [:div.contact_title "Veneesi nimi:"]
     [:input {:type "text"
-             :class (input-class-name simple-input-validation (:yacht-name @ratom))
-             :value (:yacht-name @ratom)
-             :on-change #(update-state-from-text-input :yacht-name %)}]
+             :class (input-class-name simple-input-validation (:yacht_name @ratom))
+             :value (:yacht_name @ratom)
+             :on-change #(update-state-from-text-input :yacht_name %)}]
     ]
    [:div.contact_entry
     [:div.contact_title "Sähköpostiosoitteesi:"]
@@ -188,7 +188,7 @@
   [:div {:dangerouslySetInnerHTML {:__html "&nbsp;"}}])
 
 (defn selection_area [ratom]
-  (let [days (vec (sort (:selected_days @ratom)))]
+  (let [days (vec (sort (:selected_dates @ratom)))]
     [:div.selected_days_area
      [:div.selected_days_title "Valitsemasi vartiovuorot:"]
      [:div.selected_days_selections
@@ -203,7 +203,7 @@
 (defn selection_button_area [ratom]
   [:div.select_button_container
    [:button.selection {:disabled (or
-                                  (:request-in-progress @ratom)
+                                  (:request_in_progress @ratom)
                                   (not (all-input-validates ratom)))
                        :on-click #(save-bookings ratom)}
     "Varaa valitsemasi vuorot"]])
@@ -215,10 +215,10 @@
        [:div])))
 
 (defn success_status_area [ratom]
-  [status-area :success-status "success_status_area" ratom])
+  [status-area :success_status "success_status_area" ratom])
 
 (defn error_status_area [ratom]
-  [status-area :error-status "error_status_area" ratom])
+  [status-area :error_status "error_status_area" ratom])
 
 (defn find-booking-for [bookings day]
   (first (filter #(== (:isoformat day) (:date %)) bookings)))
@@ -228,7 +228,7 @@
         isoday (:isoformat (:day daydata))
         theday (:date (:day daydata))
         is-in-future (time/after? theday today)
-        is-booked-for-me (some #(== % isoday) (:selected_days @ratom))]
+        is-booked-for-me (some #(== % isoday) (:selected_dates @ratom))]
     (cond
       (some? booking) (:bookee booking)
       (and is-booked-for-me is-in-future) [:button
@@ -238,7 +238,7 @@
       (and (not is-booked-for-me) (not is-in-future)) blank-element
       :else [:button
              {:on-click #(add-date-selection isoday)
-              :disabled (>= (count (:selected_days @ratom)) (:required_days @ratom))}
+              :disabled (>= (count (:selected_dates @ratom)) (:required_days @ratom))}
              "Valitse tämä päivä"])))
 
 (defn make-monthly-calendar-seq [first-date last-date]
@@ -253,13 +253,13 @@
 (def make-calendar-seq-memo (memoize make-monthly-calendar-seq))
 
 (defn render-calendar [ratom]
-  (let [first-date (:first-date @ratom)
-        last-date (:last-date @ratom)
-        booked-dates (:booked-dates @ratom)
+  (let [first-date (:first_date @ratom)
+        last-date (:last_date @ratom)
+        booked-dates (:booked_dates @ratom)
         today (time/now)
         bookings (map (fn [booking]
                         {:date (:booked_date booking)
-                         :bookee [:div (:name booking) [:br] (:yachtname booking)]})
+                         :bookee [:div (:name booking) [:br] (:yacht_name booking)]})
                       booked-dates)]
     [:div.calendar-area
      [:h2 "Varauskalenteri"]

@@ -34,27 +34,27 @@
       error)))
 
 (defn list-bookings []
-  {:body {:bookings (load-all-bookings)}})
+  {:body {:all_bookings (load-all-bookings)}})
 
-(defn insert-booking [{:keys [name yacht_name email booked_dates]}]
+(defn insert-booking [{:keys [name yacht_name email selected_dates]}]
   (cond
-    (or (nil? name) (nil? yacht_name) (nil? email) (nil? booked_dates)
-        (not (vector? booked_dates))) (error-reply 400 "Mandatory parameters missing.")
-    (not (== required-days (count booked_dates))) (error-reply 400 (str "You must book " required-days " days."))
+    (or (nil? name) (nil? yacht_name) (nil? email) (nil? selected_dates)
+        (not (vector? selected_dates))) (error-reply 400 "Mandatory parameters missing.")
+    (not (== required-days (count selected_dates))) (error-reply 400 (str "You must book " required-days " days."))
     :else (try
             (jdbc/with-db-transaction [t-con dbspec]
               (let [user-id (first (db-insert-user t-con
                                                    {:name name
-                                                    :yachtname yacht_name
+                                                    :yacht_name yacht_name
                                                     :email email}))
                     booking_id_containers (doall (mapcat (fn [day]
                                                            (db-insert-booking t-con
                                                                               {:booked_date day
                                                                                :users_id (:id user-id)}))
-                                                         booked_dates))
+                                                         selected_dates))
                     booking_ids_to_dates (map (fn [booking_id_container date]
                                                 {:booking_id (:id booking_id_container) :date date})
-                                              booking_id_containers booked_dates)]
+                                              booking_id_containers selected_dates)]
                 (doall (map (fn [id-date]
                               (db-insert-booking-log t-con {:booked_date (:date id-date)
                                                             :users_id (:id user-id)
@@ -67,7 +67,7 @@
                              :name name
                              :yacht_name yacht_name
                              :email email}
-                      :user_bookings booked_dates
+                      :selected_dates selected_dates
                       :all_bookings (db-list-all-bookings t-con)}}))
             (catch PSQLException pse
               (let [se (.getServerErrorMessage pse)
