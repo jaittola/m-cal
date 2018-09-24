@@ -221,7 +221,10 @@
   [status-area :error_status "error_status_area" ratom])
 
 (defn find-booking-for [bookings day]
-  (first (filter #(== (:isoformat day) (:date %)) bookings)))
+  (first (filter #(== (:isoformat day) (:booked_date %)) bookings)))
+
+(defn booking-details [booking]
+  [:div (:name booking) [:br] (:yacht_name booking)])
 
 (defn booking-or-free [today daydata ratom] ""
   (let [booking (:booking daydata)
@@ -230,7 +233,7 @@
         is-in-future (time/after? theday today)
         is-booked-for-me (some #(== % isoday) (:selected_dates @ratom))]
     (cond
-      (some? booking) (:bookee booking)
+      (some? booking) [booking-details booking]
       (and is-booked-for-me is-in-future) [:button
                                           {:on-click #(remove-date-selection isoday)}
                                           "Poista valinta"]
@@ -252,44 +255,44 @@
 
 (def make-calendar-seq-memo (memoize make-monthly-calendar-seq))
 
+(defn render-day [daydata today ratom]
+  [:tr
+   [:td {:class (str "calendar-date-cell " (:classes daydata))}
+    (:formatted-date (:day daydata))]
+   [:td {:class (str "calendar-booking-cell " (:classes daydata))}
+    [booking-or-free today daydata ratom]]])
+
+(defn render-month [{:keys [monthname days]} booked-dates today ratom]
+  [:div.calendar-month
+   [:h3 monthname]
+   [:table.calendar-month-table
+    [:tbody
+     (->> days
+          (map (fn [day]
+                 (let [booking (find-booking-for booked-dates day)]
+                   {:day day
+                    :booking booking
+                    :key (str "day-" (:dateidx day))
+                    :classes (string/join " " (filter some?
+                                                      ["calendar-day"
+                                                       (when (== 7 (:weekday day)) "calendar-sunday")
+                                                       (if (some? booking) "calendar-taken" "calendar-free")]))})))
+          (map (fn [daydata]
+                 ^{:key (:key daydata)} [render-day daydata today ratom]))
+          (doall))]]])
+
 (defn render-calendar [ratom]
   (let [first-date (:first_date @ratom)
         last-date (:last_date @ratom)
         booked-dates (:booked_dates @ratom)
-        today (time/now)
-        bookings (map (fn [booking]
-                        {:date (:booked_date booking)
-                         :bookee [:div (:name booking) [:br] (:yacht_name booking)]})
-                      booked-dates)]
+        today (time/now)]
     [:div.calendar-area
      [:h2 "Varauskalenteri"]
      [:div.calendar-container
       (->> (make-calendar-seq-memo first-date last-date)
-           (map (fn [mo]
-                  (let [monthname (:monthname mo)
-                        days (:days mo)]
-                    ^{:key (str "month-" monthname)}
-                    [:div.calendar-month
-                     [:h3 monthname]
-                     [:table.calendar-month-table
-                      [:tbody
-                       (->> days (map (fn [day]
-                                        (let [booking (find-booking-for bookings day)]
-                                          {:day day
-                                           :booking booking
-                                           :key (str "calendarday-" (:dateidx day))
-                                           :classes (string/join " " (filter some?
-                                                                             ["calendar-day"
-                                                                              (when (== 7 (:weekday day)) "calendar-sunday")
-                                                                              (if (some? booking) "calendar-taken" "calendar-free")]))})))
-                            (map (fn [daydata]
-                                   ^{:key (:key daydata)}
-                                   [:tr
-                                    [:td {:class (str "calendar-date-cell " (:classes daydata))}
-                                     (:formatted-date (:day daydata))]
-                                    [:td {:class (str "calendar-booking-cell " (:classes daydata))}
-                                     (booking-or-free today daydata ratom)]]))
-                            (doall))]]])))
+           (map (fn [month]
+                  ^{:key (str "month-" (:monthname month))}
+                  [render-month month booked-dates today ratom]))
            (doall))]]))
 
 (defn logout-link []
