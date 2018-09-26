@@ -13,8 +13,32 @@
 (def log-entry-release 2)
 (def psql-unique-constraint-sqlstate 23505)
 
-;; Convert the standard dbspec to an other dbspec with `:datasource` key
-(def dbspec (pool/make-datasource-spec (env/env :pg-uri)))
+;; Database spec. Based on the Heroku c3p0 sample code
+(defn db-uri []
+  (java.net.URI. (System/getenv "DATABASE_URL")))
+
+(defn db-user-and-password []
+  (let [userinfo (.getUserInfo (db-uri))]
+  (if (nil? userinfo)
+    nil
+    (let [[user pw] (clojure.string/split userinfo #":")]
+      {:user user
+       :password pw}))))
+
+(defn dbspec []
+  (pool/make-datasource-spec
+   (let [{:keys [user password]} (db-user-and-password)
+         uri (db-uri)
+         port (.getPort uri)
+         host (.getHost uri)
+         path (.getPath uri)]
+    {:classname "org.postgresql.Driver"
+    :subprotocol "postgresql"
+    :user user
+    :password password
+    :subname (if (= -1 port)
+                (format "//%s%s" host path)
+                (format "//%s:%s%s" host port path))})))
 
 (hugsql/def-db-fns "app_queries/queries.sql")
 
@@ -51,7 +75,7 @@
        booking-id-containers selected_dates))
 
 (defn load-all-bookings []
-  (jdbc/with-db-connection [connection dbspec]
+  (jdbc/with-db-connection [connection (dbspec)]
     (db-list-all-bookings connection)))
 
 (defn error-reply [code msg & bookings-body]
@@ -70,7 +94,7 @@
         (not (vector? selected_dates))) (error-reply 400 "Mandatory parameters missing.")
     (not (== required-days (count selected_dates))) (error-reply 400 (str "You must book " required-days " days."))
     :else (try
-            (jdbc/with-db-transaction [connection dbspec]
+            (jdbc/with-db-transaction [connection (dbspec)]
               (let [user-id (database-insert-user connection name yacht_name email)
                     bookings-ids (database-insert-bookings connection selected_dates user-id)
                     dates-to-booking-ids (map-dates-to-booking-ids bookings-ids selected_dates)

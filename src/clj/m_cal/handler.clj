@@ -67,8 +67,8 @@
 
 (defn setup
   []
-  (when (nil? (env :pg-uri))
-    (throw (Error. "You must define the database URI in environment variable PG_URI"))))
+  (when (nil? (env :database-url))
+    (throw (Error. "You must define the database URI in environment variable DATABASE_URL"))))
 
 (defn -main [& [port]]
   (setup)

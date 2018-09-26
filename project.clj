@@ -12,7 +12,7 @@
                  [compojure "1.6.1"]
                  [environ "1.1.0"]
                  [com.layerware/hugsql "0.4.9"]
-                 [org.postgresql/postgresql "42.2.2"]
+                 [org.postgresql/postgresql "42.2.5"]
                  [org.clojure/java.jdbc "0.7.8"]
                  [clojure.jdbc/clojure.jdbc-c3p0 "0.3.3"]]
 
@@ -21,7 +21,7 @@
             [lein-ring "0.12.1"]]
 
   :min-lein-version "2.5.3"
-  :uberjar-names "m-cal.jar"
+  :uberjar-name "m-cal-standalone.jar"
   :ring {:init m-cal.handler/setup
          :handler m-cal.handler/app}
   :source-paths ["src/clj"]
@@ -47,7 +47,7 @@
               :plugins      [[lein-figwheel "0.5.15"]]
               }
              :uberjar {
-                       :hooks [leiningen.cljsbuild]
+                       :prep-tasks [["cljsbuild" "once" "min"] ["less" "once"] "compile"]
                        :omit-source true
                        :aot :all}}
 
