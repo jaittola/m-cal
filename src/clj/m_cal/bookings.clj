@@ -8,9 +8,6 @@
             [jdbc.pool.c3p0 :as pool])
   (:import [org.postgresql.util PSQLException]))
 
-;; TODO, move this into configuration
-(def required-days 2)
-
 (def log-entry-booking 1)
 (def log-entry-release 2)
 (def psql-unique-constraint-sqlstate 23505)
@@ -95,11 +92,12 @@
           :calendar_config (config/calendar-config)}})
 
 (defn validate-booking-parameters [name yacht_name email selected_dates]
-  (cond
-    (or (nil? name) (nil? yacht_name) (nil? email) (nil? selected_dates)
-        (not (vector? selected_dates))) (error-reply 400 "Mandatory parameters missing.")
-    (not (== required-days (count selected_dates))) (error-reply 400 (str "You must book " required-days " days."))
-    :else nil))
+  (let [required-days (config/required-days)]
+    (cond
+      (or (nil? name) (nil? yacht_name) (nil? email) (nil? selected_dates)
+          (not (vector? selected_dates))) (error-reply 400 "Mandatory parameters missing.")
+      (not (== required-days (count selected_dates))) (error-reply 400 (str "You must book " required-days " days."))
+      :else nil)))
 
 (defn insert-booking [{:keys [name yacht_name email selected_dates]}]
   (let [validation-err (validate-booking-parameters name yacht_name email selected_dates)]
