@@ -6,7 +6,8 @@
             [environ.core :as env]
             [clojure.java.jdbc :as jdbc]
             [jdbc.pool.c3p0 :as pool])
-  (:import [org.postgresql.util PSQLException]))
+  (:import [org.postgresql.util PSQLException]
+           [java.util UUID]))
 
 (def log-entry-booking 1)
 (def log-entry-release 2)
@@ -54,19 +55,24 @@
                                        :users_id (:id user-id)}))
                  selected_dates)))
 
-(defn database-insert-booking-log [connection dates-to-booking-ids user-id]
+(defn database-delete-bookings [connection bookings-to-delete]
+  (when (seq bookings-to-delete)
+    (let [ids (doall (map #(:booking_id %) bookings-to-delete))]
+      (db-delete-booking connection {:ids ids}))))
+
+(defn database-insert-booking-log [connection dates-to-booking-ids user-id op]
   (doall (map (fn [id-date]
                 (db-insert-booking-log connection
-                                       {:booked_date (:date id-date)
+                                       {:booked_date (:booked_date id-date)
                                         :users_id (:id user-id)
                                         :booking_id (:booking_id id-date)
-                                        :booking_or_release log-entry-booking}))
+                                        :booking_or_release op}))
               dates-to-booking-ids)))
 
 (defn map-dates-to-booking-ids [booking-id-containers selected_dates]
   (map (fn [booking-id-container date]
          {:booking_id (:id booking-id-container)
-          :date date})
+          :booked_date date})
        booking-id-containers selected_dates))
 
 (defn load-all-bookings []
@@ -99,25 +105,101 @@
       (not (== required-days (count selected_dates))) (error-reply 400 (str "You must book " required-days " days."))
       :else nil)))
 
+(defn success-booking-reply [connection user-id name yacht_name email selected_dates]
+  {:status 200
+   :body {:user {:id (:id user-id)
+                 :secret_id (:secret_id user-id)
+                 :name name
+                 :yacht_name yacht_name
+                 :email email}
+          :selected_dates selected_dates
+          :all_bookings (db-list-all-bookings connection)
+          :calendar_config (config/calendar-config)}})
+
+(defn update-booking-with-validated-params [connection user-id name yacht_name email selected_dates]
+  (db-update-user connection
+                  {:name name
+                   :yacht_name yacht_name
+                   :email email
+                   :id (:id user-id)})
+  (let [db-selected-dates (db-select-user-bookings-for-update connection
+                                                              {:user_id (:id user-id)})
+        db-selected-dates-values (map #(:booked_date %) db-selected-dates)
+        bookings-to-delete (filter (fn [booking] (not (some #(= (:booked_date booking) %) selected_dates))) db-selected-dates)
+        bookings-to-add (filter (fn [booking] (not (some #(= booking %) db-selected-dates-values)))
+                                selected_dates)
+        _ (database-delete-bookings connection bookings-to-delete)
+
+        inserted-bookings-ids (database-insert-bookings connection
+                                                        bookings-to-add
+                                                        user-id)
+        dates-to-inserted-booking-ids (map-dates-to-booking-ids inserted-bookings-ids
+                                                                bookings-to-add)
+
+        _ (database-insert-booking-log connection
+                                       dates-to-inserted-booking-ids
+                                       user-id
+                                       log-entry-booking)
+        _ (database-insert-booking-log connection
+                                       bookings-to-delete
+                                       user-id
+                                       log-entry-release)]
+
+  (success-booking-reply connection
+                         user-id
+                         name
+                         yacht_name
+                         email
+                         selected_dates)))
+
 (defn insert-booking [{:keys [name yacht_name email selected_dates]}]
-  (let [validation-err (validate-booking-parameters name yacht_name email selected_dates)]
+  (let [validation-err (validate-booking-parameters name
+                                                    yacht_name
+                                                    email
+                                                    selected_dates)]
     (if validation-err
       validation-err
       (try (jdbc/with-db-transaction [connection (dbspec)]
-             (let [user-id (database-insert-user connection name yacht_name email)
-                   bookings-ids (database-insert-bookings connection selected_dates user-id)
-                   dates-to-booking-ids (map-dates-to-booking-ids bookings-ids selected_dates)
-                   _ (database-insert-booking-log connection dates-to-booking-ids user-id)]
-               {:status 200
-                :body {:user {:id (:id user-id)
-                              :key (:secret_id user-id)
-                              :name name
-                              :yacht_name yacht_name
-                              :email email}
-                       :selected_dates selected_dates
-                       :all_bookings (db-list-all-bookings connection)
-                       :calendar_config (config/calendar-config)}}))
+             (let [user-id (database-insert-user connection
+                                                 name
+                                                 yacht_name
+                                                 email)
+                   bookings-ids (database-insert-bookings connection
+                                                          selected_dates
+                                                          user-id)
+                   dates-to-booking-ids (map-dates-to-booking-ids bookings-ids
+                                                                  selected_dates)
+                   _ (database-insert-booking-log connection
+                                                  dates-to-booking-ids
+                                                  user-id
+                                                  log-entry-booking)]
+               (success-booking-reply connection
+                                      user-id
+                                      name
+                                      yacht_name
+                                      email
+                                      selected_dates)))
            (catch PSQLException pse
              (handle-psql-error pse))))))
 
-;; (defn update-booking {:keys
+(defn update-booking [secret_id {:keys [name yacht_name email selected_dates]}]
+  (let [validation-err (validate-booking-parameters name
+                                                    yacht_name
+                                                    email
+                                                    selected_dates)]
+    (cond
+      validation-err validation-err
+      (nil? secret_id) (error-reply 400 "Mandatory parameters missing.")
+      :else (try (jdbc/with-db-transaction [connection (dbspec)]
+                   (let [user-id (first (db-find-user-by-secret-id connection
+                                                                   {:user_secret_id (UUID/fromString secret_id)}))]
+                     (println "user-id iz " user-id)
+                     (if (nil? user-id) (error-reply 400 "No such user")
+                         (update-booking-with-validated-params connection
+                                                               user-id
+                                                               name
+                                                               yacht_name
+                                                               email
+                                                               selected_dates))))
+                 (catch PSQLException pse
+                   (handle-psql-error pse))))))
