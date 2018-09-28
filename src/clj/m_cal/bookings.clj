@@ -76,41 +76,50 @@
   (jdbc/with-db-connection [connection (dbspec)]
     (db-list-all-bookings connection)))
 
-(defn error-reply [code msg & bookings-body]
-  (let [error {:status code
-               :body {:error_result msg}}]
-    (if (some? bookings-body)
-      (assoc error :all_bookings bookings-body)
-      error)))
+(defn error-reply [code msg & [bookings-body]]
+  {:status code
+   :body (if bookings-body {:error_result msg
+                            :all_bookings bookings-body}
+             {:error_result msg})})
+
+(defn handle-psql-error [pse]
+  (let [se (.getServerErrorMessage pse)
+        sqlstate (.getSQLState se)]
+    (println "Storing bookings to database failed: " (.toString pse) "; sqlstate: " sqlstate)
+    (if (= (parse-int sqlstate) psql-unique-constraint-sqlstate)
+      (error-reply 409 "The dates you selected were already booked" (load-all-bookings))
+      (error-reply 500 "Storing bookings to database failed"))))
 
 (defn list-bookings []
   {:body {:all_bookings (load-all-bookings)
           :calendar_config (config/calendar-config)}})
 
-(defn insert-booking [{:keys [name yacht_name email selected_dates]}]
+(defn validate-booking-parameters [name yacht_name email selected_dates]
   (cond
     (or (nil? name) (nil? yacht_name) (nil? email) (nil? selected_dates)
         (not (vector? selected_dates))) (error-reply 400 "Mandatory parameters missing.")
     (not (== required-days (count selected_dates))) (error-reply 400 (str "You must book " required-days " days."))
-    :else (try
-            (jdbc/with-db-transaction [connection (dbspec)]
-              (let [user-id (database-insert-user connection name yacht_name email)
-                    bookings-ids (database-insert-bookings connection selected_dates user-id)
-                    dates-to-booking-ids (map-dates-to-booking-ids bookings-ids selected_dates)
-                    _ (database-insert-booking-log connection dates-to-booking-ids user-id)]
-                {:status 200
-                 :body {:user {:id (:id user-id)
-                               :key (:secret_id user-id)
-                               :name name
-                               :yacht_name yacht_name
-                               :email email}
-                        :selected_dates selected_dates
-                        :all_bookings (db-list-all-bookings connection)
-                        :calendar_config (config/calendar-config)}}))
-            (catch PSQLException pse
-              (let [se (.getServerErrorMessage pse)
-                    sqlstate (.getSQLState se)]
-                (println "Storing bookings to database failed: " (.toString pse) "; sqlstate: " sqlstate)
-                (if (= (parse-int sqlstate) psql-unique-constraint-sqlstate)
-                  (error-reply 409 "The dates you selected were already booked" (load-all-bookings))
-                  (error-reply 500 "Storing bookings to database failed")))))))
+    :else nil))
+
+(defn insert-booking [{:keys [name yacht_name email selected_dates]}]
+  (let [validation-err (validate-booking-parameters name yacht_name email selected_dates)]
+    (if validation-err
+      validation-err
+      (try (jdbc/with-db-transaction [connection (dbspec)]
+             (let [user-id (database-insert-user connection name yacht_name email)
+                   bookings-ids (database-insert-bookings connection selected_dates user-id)
+                   dates-to-booking-ids (map-dates-to-booking-ids bookings-ids selected_dates)
+                   _ (database-insert-booking-log connection dates-to-booking-ids user-id)]
+               {:status 200
+                :body {:user {:id (:id user-id)
+                              :key (:secret_id user-id)
+                              :name name
+                              :yacht_name yacht_name
+                              :email email}
+                       :selected_dates selected_dates
+                       :all_bookings (db-list-all-bookings connection)
+                       :calendar_config (config/calendar-config)}}))
+           (catch PSQLException pse
+             (handle-psql-error pse))))))
+
+;; (defn update-booking {:keys
