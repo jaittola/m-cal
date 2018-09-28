@@ -25,20 +25,21 @@
       {:user user
        :password pw}))))
 
-(defn dbspec []
-  (pool/make-datasource-spec
-   (let [{:keys [user password]} (db-user-and-password)
-         uri (db-uri)
-         port (.getPort uri)
-         host (.getHost uri)
-         path (.getPath uri)]
-    {:classname "org.postgresql.Driver"
-    :subprotocol "postgresql"
-    :user user
-    :password password
-    :subname (if (= -1 port)
-                (format "//%s%s" host path)
-                (format "//%s:%s%s" host port path))})))
+(def dbspec
+  (delay
+   (pool/make-datasource-spec
+    (let [{:keys [user password]} (db-user-and-password)
+          uri (db-uri)
+          port (.getPort uri)
+          host (.getHost uri)
+          path (.getPath uri)]
+      {:classname "org.postgresql.Driver"
+       :subprotocol "postgresql"
+       :user user
+       :password password
+       :subname (if (= -1 port)
+                  (format "//%s%s" host path)
+                  (format "//%s:%s%s" host port path))}))))
 
 (hugsql/def-db-fns "app_queries/queries.sql")
 
@@ -76,7 +77,7 @@
        booking-id-containers selected_dates))
 
 (defn load-all-bookings []
-  (jdbc/with-db-connection [connection (dbspec)]
+  (jdbc/with-db-connection [connection @dbspec]
     (db-list-all-bookings connection)))
 
 (defn error-reply [code msg & [bookings-body]]
@@ -159,7 +160,7 @@
                                                     selected_dates)]
     (if validation-err
       validation-err
-      (try (jdbc/with-db-transaction [connection (dbspec)]
+      (try (jdbc/with-db-transaction [connection @dbspec]
              (let [user-id (database-insert-user connection
                                                  name
                                                  yacht_name
@@ -190,7 +191,7 @@
     (cond
       validation-err validation-err
       (nil? secret_id) (error-reply 400 "Mandatory parameters missing.")
-      :else (try (jdbc/with-db-transaction [connection (dbspec)]
+      :else (try (jdbc/with-db-transaction [connection @dbspec]
                    (let [user-id (first (db-find-user-by-secret-id connection
                                                                    {:user_secret_id (UUID/fromString secret_id)}))]
                      (println "user-id iz " user-id)
