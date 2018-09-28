@@ -7,7 +7,8 @@
             [ring.adapter.jetty :as jetty]
             [ring.middleware.basic-authentication :as basicauth]
             [environ.core :refer [env]]
-            [m-cal.bookings :as bookings])
+            [m-cal.bookings :as bookings]
+            [m-cal.config :as config])
   (:gen-class))
 
 (defn get-auth-params []
@@ -67,6 +68,7 @@
 
 (defn setup
   []
+  (config/verify-config)
   (when (nil? (env :database-url))
     (throw (Error. "You must define the database URI in environment variable DATABASE_URL"))))
 

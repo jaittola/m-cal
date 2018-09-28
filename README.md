@@ -6,33 +6,42 @@ couple of times during the summer.
 
 ## Environment variables
 
-You can specify environment variables to protect the user interface
-with HTTP Basic-Auth. You also need DATABASE_URL, which contains the
-PostgreSQL database connection URI, in your environment. If you need a
-database, section "Setting up a development database" below gives
-instrutions on setting up a database for development work easily.
+To configure the application, you must set the following environment
+variables, for which example values are given below:
 
 ```
-export DATABASE_URL="postgresql://mcal@localhost/mcaldb"
+export DATABASE_URL="postgresql://mcal@localhost/mcaldb"  # URL of the PostgreSQL database
+export FIRST_BOOKING_DATE="2018-09-01"     # First available booking date
+export LAST_BOOKING_DATE="2018-12-31"      # Last available booking date
+export REQUIRED_DAYS=2                     # Number of bookings required
+```
+
+Section "Setting up a development database" in this document
+gives instructions on setting up a database for development work. You
+probably want something more permanent for production use; services
+like Heroku Postgres or Amazon RDS are good choices. If you want to
+set up and manage the database yourself, have a look at PostgreSQL's
+official documentation.
+
+You can specify environment variables to protect the user interface
+with HTTP Basic-Auth.
+
+```
 
 # These values are for local testing only
 export BOOKING_USERNAME=user
 export BOOKING_PASSWORD=password
 export BOOKING_REALM="Vartiovuorovaraukset"
 
-# To run with these variables, you can run
-DATABASE_URL="postgresql://mcal@localhost/mcaldb" BOOKING_USERNAME=user BOOKING_PASSWORD=password BOOKING_REALM="Varaukset" lein ring server
+# To use these values, you can run
+DATABASE_URL="postgresql://mcal@localhost/mcaldb" FIRST_BOOKING_DATE="2018-09-01" LAST_BOOKING_DATE="2018-12-31" REQUIRED_DAYS=2 BOOKING_USERNAME=user BOOKING_PASSWORD=password BOOKING_REALM="Varaukset" lein ring server-headless
 ```
 
 ## Clojure development instructions
 
-Run
-
-```
-lein ring server
-```
-
-Then point your web browser to http://localhost:3000
+After starting the server with `lein ring server` or `lein ring
+server-headless` (remember the environment variables), point your web
+browser to http://localhost:3000
 
 ## Setting up a development database
 

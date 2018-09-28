@@ -21,8 +21,8 @@
                  :name ""
                  :email ""
                  :yacht_name ""
-                 :first_date "2018-05-12"
-                 :last_date "2018-12-31"
+                 :first_date nil
+                 :last_date nil
                  :booked_dates []
                  :error_status nil
                  :success_status nil
@@ -76,6 +76,12 @@
   (swap! app-state assoc
          :request_in_progress in-progress))
 
+(defn set-calendar-config [config]
+  (swap! app-state assoc
+         :first_date (:first_date config)
+         :last_date (:last_date config)
+         :required_days (or (:required_days config) 2)))
+
 (defn simple-input-validation [value]
   (let [string-len (count value)]
     (cond
@@ -104,13 +110,19 @@
 
 (defn load-bookings []
   (go (let [response (<! (http/get "/bookings/api/1/bookings"))
-            bookings (when (= (:status response) 200)
-                       (:all_bookings (:body response)))]
+            status-ok (= (:status response) 200)
+            bookings (when status-ok
+                       (:all_bookings (:body response)))
+            config (when status-ok
+                     (:calendar_config (:body response)))]
+        (js/console.log "BOOKING DATA" bookings config)
         (if bookings
           (set-booked-dates bookings)
           (do
             (set-booked-dates [])
-            (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen"))))))
+            (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen")))
+        (when config
+          (set-calendar-config config)))))
 
 (defn save-bookings [ratom]
   (go (do
@@ -288,12 +300,13 @@
         today (time/now)]
     [:div.calendar-area
      [:h2 "Varauskalenteri"]
-     [:div.calendar-container
-      (->> (make-calendar-seq-memo first-date last-date)
-           (map (fn [month]
-                  ^{:key (str "month-" (:monthname month))}
-                  [render-month month booked-dates today ratom]))
-           (doall))]]))
+     (when (not (or (nil? first-date) (nil? last-date)))
+       [:div.calendar-container
+        (->> (make-calendar-seq-memo first-date last-date)
+             (map (fn [month]
+                    ^{:key (str "month-" (:monthname month))}
+                    [render-month month booked-dates today ratom]))
+             (doall))])]))
 
 (defn logout-link []
   [:div.logout_header

@@ -1,5 +1,7 @@
 (ns m-cal.bookings
-  (:require [hugsql.core :as hugsql]
+  (:require [m-cal.config :as config]
+            [m-cal.util :refer [parse-int]]
+            [hugsql.core :as hugsql]
             [clojure.java.jdbc :as jdbc]
             [environ.core :as env]
             [clojure.java.jdbc :as jdbc]
@@ -42,10 +44,6 @@
 
 (hugsql/def-db-fns "app_queries/queries.sql")
 
-(defn parse-int [number-string]
-  (try (Integer/parseInt number-string)
-       (catch Exception e nil)))
-
 (defn database-insert-user [connection name yacht_name email]
   (first (db-insert-user connection
                          {:name name
@@ -86,7 +84,8 @@
       error)))
 
 (defn list-bookings []
-  {:body {:all_bookings (load-all-bookings)}})
+  {:body {:all_bookings (load-all-bookings)
+          :calendar_config (config/calendar-config)}})
 
 (defn insert-booking [{:keys [name yacht_name email selected_dates]}]
   (cond
@@ -106,7 +105,8 @@
                                :yacht_name yacht_name
                                :email email}
                         :selected_dates selected_dates
-                        :all_bookings (db-list-all-bookings connection)}}))
+                        :all_bookings (db-list-all-bookings connection)
+                        :calendar_config (config/calendar-config)}}))
             (catch PSQLException pse
               (let [se (.getServerErrorMessage pse)
                     sqlstate (.getSQLState se)]
