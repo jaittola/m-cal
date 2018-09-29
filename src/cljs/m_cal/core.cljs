@@ -4,7 +4,8 @@
             [cljs-time.core :as time]
             [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
-            [m-cal.utils :as u])
+            [m-cal.utils :as u]
+            [cemerick.url :refer (url url-encode)])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -22,6 +23,7 @@
                  :email ""
                  :yacht_name ""
                  :user_private_id nil
+                 :user_public_id nil
                  :first_date nil
                  :last_date nil
                  :booked_dates []
@@ -68,7 +70,8 @@
          :name ""
          :email ""
          :yacht_name ""
-         :user_private_id nil))
+         :user_private_id nil
+         :user_public_id nil))
 
 (defn set-user [user selected_dates]
   (swap! app-state assoc
@@ -77,7 +80,12 @@
          :email (:email user)
          :yacht_name (:yacht_name user)
          :user_private_id (:secret_id user)
+         :user_public_id (:id user)
          :selected_dates selected_dates))
+
+(defn set-user-private-id [private_id]
+  (swap! app-state assoc
+         :user_private_id private_id))
 
 (defn clear-selected-days []
   (swap! app-state assoc
@@ -119,29 +127,44 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; HTTP calls to the booking API
 
-(defn load-bookings []
-  (go (let [response (<! (http/get "/bookings/api/1/bookings"))
+(defn load-bookings [ratom]
+  (go (let [private-id (:user_private_id @ratom)
+            request-uri (if private-id
+                          (str "/bookings/api/1/bookings/" private-id)
+                          "/bookings/api/1/bookings")
+            response (<! (http/get request-uri))
             status-ok (= (:status response) 200)
+            body (:body response)
             bookings (when status-ok
-                       (:all_bookings (:body response)))
+                       (:all_bookings body))
             config (when status-ok
-                     (:calendar_config (:body response)))]
+                     (:calendar_config body))
+            user (when status-ok
+                   (:user body))
+            selected_dates (when status-ok
+                             (:selected_dates body))]
         (if bookings
           (set-booked-dates bookings)
           (do
             (set-booked-dates [])
             (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen")))
         (when config
-          (set-calendar-config config)))))
+          (set-calendar-config config))
+        (when (and selected_dates user)
+          (set-user user selected_dates)))))
 
 (defn save-bookings [ratom]
   (go (do
         (set-request-in-progress true)
-        (let [response (<! (http/post "/bookings/api/1/bookings"
-                                      {:json-params {:name (:name @ratom)
-                                                     :email (:email @ratom)
-                                                     :yacht_name (:yacht_name @ratom)
-                                                     :selected_dates (:selected_dates @ratom)}}))
+        (let [private-id (:user_private_id @ratom)
+              body {:json-params {:name (:name @ratom)
+                                  :email (:email @ratom)
+                                  :yacht_name (:yacht_name @ratom)
+                                  :selected_dates (:selected_dates @ratom)}}
+              request (if private-id
+                        (http/put (str "/bookings/api/1/bookings/" private-id) body)
+                        (http/post "/bookings/api/1/bookings" body))
+              response (<! request)
               status (:status response)
               body (:body response)
               bookings (:all_bookings body)
@@ -257,12 +280,11 @@
         is-in-future (time/after? theday today)
         is-booked-for-me (some #(== % isoday) (:selected_dates @ratom))]
     (cond
-      (some? booking) [booking-details booking]
       (and is-booked-for-me is-in-future) [:button
                                           {:on-click #(remove-date-selection isoday)}
-                                          "Poista valinta"]
-      (and is-booked-for-me (not is-in-future)) [:div "Oma varauksesi"]
-      (and (not is-booked-for-me) (not is-in-future)) blank-element
+                                           "Poista valinta"]
+      (and booking (not (= (:user_id booking) (:user_public_id @ratom)))) [booking-details booking]
+      (and (nil? booking) (not is-in-future)) blank-element
       :else [:button
              {:on-click #(add-date-selection isoday)
               :disabled (>= (count (:selected_dates @ratom)) (:required_days @ratom))}
@@ -351,7 +373,11 @@
     ))
 
 (defn reload []
-  (load-bookings)
+  (let [location-url (url (-> js/window .-location .-href))
+        user (get (:query location-url) "user")]
+    (when user
+      (set-user-private-id user)))
+  (load-bookings app-state)
   (reagent/render [page app-state]
                   (.getElementById js/document "app")))
 

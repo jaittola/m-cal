@@ -14,8 +14,8 @@
                  [com.layerware/hugsql "0.4.9"]
                  [org.postgresql/postgresql "42.2.5"]
                  [org.clojure/java.jdbc "0.7.8"]
-                 [clojure.jdbc/clojure.jdbc-c3p0 "0.3.3"]]
-
+                 [clojure.jdbc/clojure.jdbc-c3p0 "0.3.3"]
+                 [com.cemerick/url "0.1.1"]]
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-less "1.7.5"]
             [lein-ring "0.12.1"]]
