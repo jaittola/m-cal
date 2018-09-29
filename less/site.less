@@ -1,8 +1,9 @@
 
-@h2_font_size: 2rem;
+@h2_font_size: 1.5rem;
 @font_size: 1.2rem;
 @font_family: serif;
 
+@body_padding: 5%;
 @area_padding: 10px;
 @area_vertical_margin: 2px;
 @calendar_cell_padding: 4px;
@@ -15,9 +16,15 @@
 @taken_calendar_color: #e0e0e0;
 @sunday_border_bottom_color: black;
 @day_border_bottom_color: #cfcfcf;
+@heading_color: #1a0dab;
 
 html {
     -webkit-text-size-adjust: none;
+}
+
+body {
+    margin-left: @body_padding;
+    margin-right: @body_padding;
 }
 
 input, div, p, li, button {
@@ -25,12 +32,26 @@ input, div, p, li, button {
     font-family: @font_family;
 }
 
+h1 {
+    color: @heading_color;
+}
+
+
 h2 {
     font-size: @h2_font_size;
     font-weight: bold;
+    color: @heading_color;
 }
 
 h3 {
+    font-size: @font_size;
+    font-weight: bold;
+    color: @heading_color;
+}
+
+h4 {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
     font-size: @font_size;
     font-weight: bold;
 }
@@ -103,6 +124,7 @@ button {
 
 .select_button_container {
     padding-top: @select_button_padding;
+    padding-bottom: @select_button_padding;
 }
 
 .calendar-container {

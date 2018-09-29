@@ -277,7 +277,7 @@
 
 (defn render-month [{:keys [monthname days]} booked-dates today ratom]
   [:div.calendar-month
-   [:h3 monthname]
+   [:h4 monthname]
    [:table.calendar-month-table
     [:tbody
      (->> days
