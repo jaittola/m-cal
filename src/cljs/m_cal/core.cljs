@@ -67,7 +67,17 @@
          :selected_dates []
          :name ""
          :email ""
-         :yacht_name ""))
+         :yacht_name ""
+         :user_private_id nil))
+
+(defn set-user [user selected_dates]
+  (swap! app-state assoc
+         :selected_dates []
+         :name (:name user)
+         :email (:email user)
+         :yacht_name (:yacht_name user)
+         :user_private_id (:secret_id user)
+         :selected_dates selected_dates))
 
 (defn clear-selected-days []
   (swap! app-state assoc
@@ -116,7 +126,6 @@
                        (:all_bookings (:body response)))
             config (when status-ok
                      (:calendar_config (:body response)))]
-        (js/console.log "BOOKING DATA" bookings config)
         (if bookings
           (set-booked-dates bookings)
           (do
@@ -134,19 +143,21 @@
                                                      :yacht_name (:yacht_name @ratom)
                                                      :selected_dates (:selected_dates @ratom)}}))
               status (:status response)
-              bookings (:all_bookings (:body response))]
+              body (:body response)
+              bookings (:all_bookings body)
+              user (:user body)
+              selected_dates (:selected_dates body)]
           (set-request-in-progress false)
           (when bookings
             (set-booked-dates bookings))
           (case status
             200 (do
-                  (clear-user)
+                  (set-user user selected_dates)
                   (set-success-status "Varauksesi on talletettu. Varausvahvistus on lähetetty sähköpostiisi. Varausvahvistuksessa on linkki, jota voit käyttää varaustesi muokkaamiseen."))
             409 (do
                   (clear-selected-days)
                   (set-error-status "Joku muu ehti valita samat päivät kuin sinä. Valitse uudet päivät."))
             (do
-              (clear-user)
               (set-error-status "Varauksien tallettaminen epäonnistui. Yritä myöhemmin uudelleen.")))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
