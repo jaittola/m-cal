@@ -47,9 +47,22 @@ FROM booking
 WHERE users_id = :user_id
 FOR UPDATE;
 
+-- :name db-select-user-bookings :? :*
+-- :doc Find user's bookings for updating.
+SELECT
+id AS booking_id,
+TO_CHAR(booked_date, 'YYYY-MM-DD') AS booked_date
+FROM booking
+WHERE users_id = :user_id;
+
 -- :name db-find-user-by-secret-id :? :*
 -- :doc Find user by secret id
-SELECT id, secret_id
+SELECT
+id,
+secret_id,
+username AS name,
+yachtname AS yacht_name,
+email
 FROM users u
 WHERE secret_id = :user_secret_id;
 

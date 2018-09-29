@@ -76,15 +76,26 @@
           :booked_date date})
        booking-id-containers selected_dates))
 
-(defn load-all-bookings []
-  (jdbc/with-db-connection [connection @dbspec]
-    (db-list-all-bookings connection)))
+(defn success-booking-reply [connection user-id name yacht_name email selected_dates]
+  {:status 200
+   :body {:user {:id (:id user-id)
+                 :secret_id (:secret_id user-id)
+                 :name name
+                 :yacht_name yacht_name
+                 :email email}
+          :selected_dates selected_dates
+          :all_bookings (db-list-all-bookings connection)
+          :calendar_config (config/calendar-config)}})
 
 (defn error-reply [code msg & [bookings-body]]
   {:status code
    :body (if bookings-body {:error_result msg
                             :all_bookings bookings-body}
              {:error_result msg})})
+
+(defn load-all-bookings []
+  (jdbc/with-db-connection [connection @dbspec]
+    (db-list-all-bookings connection)))
 
 (defn handle-psql-error [pse]
   (let [se (.getServerErrorMessage pse)
@@ -98,6 +109,23 @@
   {:body {:all_bookings (load-all-bookings)
           :calendar_config (config/calendar-config)}})
 
+(defn list-bookings-with-user [id]
+  (if
+      (nil? id) (error-reply 400 "Mandatory parameters missing.")
+      (try (jdbc/with-db-transaction [connection @dbspec]
+             (let [user (first (db-find-user-by-secret-id connection
+                                                          {:user_secret_id (UUID/fromString id)}))
+                   selected-dates (->> (db-select-user-bookings connection
+                                                                {:user_id (:id user)})
+                                       (map #(:booked_date %)))]
+               (if (nil? user) (error-reply 400 "No such user")
+                   (success-booking-reply connection
+                                          user
+                                          (:name user)
+                                          (:yacht_name user)
+                                          (:email user)
+                                          selected-dates)))))))
+
 (defn validate-booking-parameters [name yacht_name email selected_dates]
   (let [required-days (config/required-days)]
     (cond
@@ -105,17 +133,6 @@
           (not (vector? selected_dates))) (error-reply 400 "Mandatory parameters missing.")
       (not (== required-days (count selected_dates))) (error-reply 400 (str "You must book " required-days " days."))
       :else nil)))
-
-(defn success-booking-reply [connection user-id name yacht_name email selected_dates]
-  {:status 200
-   :body {:user {:id (:id user-id)
-                 :secret_id (:secret_id user-id)
-                 :name name
-                 :yacht_name yacht_name
-                 :email email}
-          :selected_dates selected_dates
-          :all_bookings (db-list-all-bookings connection)
-          :calendar_config (config/calendar-config)}})
 
 (defn update-booking-with-validated-params [connection user-id name yacht_name email selected_dates]
   (db-update-user connection
@@ -192,12 +209,11 @@
       validation-err validation-err
       (nil? secret_id) (error-reply 400 "Mandatory parameters missing.")
       :else (try (jdbc/with-db-transaction [connection @dbspec]
-                   (let [user-id (first (db-find-user-by-secret-id connection
-                                                                   {:user_secret_id (UUID/fromString secret_id)}))]
-                     (println "user-id iz " user-id)
-                     (if (nil? user-id) (error-reply 400 "No such user")
+                   (let [user (first (db-find-user-by-secret-id connection
+                                                                {:user_secret_id (UUID/fromString secret_id)}))]
+                     (if (nil? user) (error-reply 400 "No such user")
                          (update-booking-with-validated-params connection
-                                                               user-id
+                                                               user
                                                                name
                                                                yacht_name
                                                                email

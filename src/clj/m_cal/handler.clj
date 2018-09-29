@@ -42,6 +42,7 @@
   (GET "/index" [] (resp/file-response "resources/public/index.html"))
   (ANY "/logout" [] {:status 401
                      :body "Olet kirjautunut ulos."})
+  (GET "/api/1/bookings/:id" [id] (bookings/list-bookings-with-user id))
   (GET "/api/1/bookings" [] (bookings/list-bookings))
   (POST "/api/1/bookings" [:as {body :body}] (bookings/insert-booking body))
   (PUT "/api/1/bookings/:id" [id :as {body :body}] (bookings/update-booking id body))

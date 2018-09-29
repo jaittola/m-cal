@@ -21,6 +21,7 @@
                  :name ""
                  :email ""
                  :yacht_name ""
+                 :user_private_id nil
                  :first_date nil
                  :last_date nil
                  :booked_dates []
