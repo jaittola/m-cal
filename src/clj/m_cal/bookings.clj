@@ -59,15 +59,11 @@
           :calendar_config (config/calendar-config)}})
 
 (defn error-reply [code msg & [bookings-body selected-dates]]
-  (let [body {:error_result msg}
-        body2 (if bookings-body
-                (assoc body :all_bookings bookings-body)
-                body)
-        body3 (if selected-dates
-                (assoc body2 :selected_dates selected-dates)
-                body2)]
+  (let [body (merge {:error_result msg}
+                    (when bookings-body) {:all_bookings bookings-body}
+                    (when selected-dates {:selected_dates selected-dates}))]
     {:status code
-     :body body3}))
+     :body body}))
 
 (defn load-all-bookings []
   (jdbc/with-db-connection [connection @db-common/dbspec]
