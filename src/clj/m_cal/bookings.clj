@@ -70,6 +70,11 @@
                                         :booking_or_release op}))
               dates-to-booking-ids)))
 
+(defn database-get-user-selections [connection user-id]
+  (->> (db-select-user-bookings connection
+                                {:user_id user-id})
+       (map #(:booked_date %))))
+
 (defn map-dates-to-booking-ids [booking-id-containers selected_dates]
   (map (fn [booking-id-container date]
          {:booking_id (:id booking-id-container)
@@ -87,22 +92,38 @@
           :all_bookings (db-list-all-bookings connection)
           :calendar_config (config/calendar-config)}})
 
-(defn error-reply [code msg & [bookings-body]]
-  {:status code
-   :body (if bookings-body {:error_result msg
-                            :all_bookings bookings-body}
-             {:error_result msg})})
+(defn error-reply [code msg & [bookings-body selected-dates]]
+  (let [body {:error_result msg}
+        body2 (if bookings-body
+                (assoc body :all_bookings bookings-body)
+                body)
+        body3 (if selected-dates
+                (assoc body2 :selected_dates selected-dates)
+                body2)]
+    {:status code
+     :body body3}))
 
 (defn load-all-bookings []
   (jdbc/with-db-connection [connection @dbspec]
     (db-list-all-bookings connection)))
 
-(defn handle-psql-error [pse]
+(defn error-reply-409 [& [user-id]]
+  (try (jdbc/with-db-transaction [connection @dbspec]
+         (error-reply 409 "The dates you selected were already booked"
+                      (db-list-all-bookings connection)
+                      (when user-id (database-get-user-selections connection user-id))))
+       (catch PSQLException pse
+         (let [se (.getServerErrorMessage pse)
+               sqlstate (.getSQLState se)]
+           (println "Loading booking data for 409 reply failed: " (.toString pse) "; sqlstate: " sqlstate)
+           (error-reply 500 "Loading booking data from database failed")))))
+
+(defn handle-psql-error [pse & [user-id]]
   (let [se (.getServerErrorMessage pse)
         sqlstate (.getSQLState se)]
     (println "Storing bookings to database failed: " (.toString pse) "; sqlstate: " sqlstate)
     (if (= (parse-int sqlstate) psql-unique-constraint-sqlstate)
-      (error-reply 409 "The dates you selected were already booked" (load-all-bookings))
+      (error-reply-409 user-id)
       (error-reply 500 "Storing bookings to database failed"))))
 
 (defn list-bookings []
@@ -115,16 +136,16 @@
       (try (jdbc/with-db-transaction [connection @dbspec]
              (let [user (first (db-find-user-by-secret-id connection
                                                           {:user_secret_id (UUID/fromString id)}))
-                   selected-dates (->> (db-select-user-bookings connection
-                                                                {:user_id (:id user)})
-                                       (map #(:booked_date %)))]
+                   selected-dates (database-get-user-selections connection (:id user))]
                (if (nil? user) (error-reply 400 "No such user")
                    (success-booking-reply connection
                                           user
                                           (:name user)
                                           (:yacht_name user)
                                           (:email user)
-                                          selected-dates)))))))
+                                          selected-dates))))
+           (catch PSQLException pse
+             (handle-psql-error pse)))))
 
 (defn validate-booking-parameters [name yacht_name email selected_dates]
   (let [required-days (config/required-days)]
@@ -135,40 +156,43 @@
       :else nil)))
 
 (defn update-booking-with-validated-params [connection user-id name yacht_name email selected_dates]
-  (db-update-user connection
-                  {:name name
-                   :yacht_name yacht_name
-                   :email email
-                   :id (:id user-id)})
-  (let [db-selected-dates (db-select-user-bookings-for-update connection
+  (try
+    (db-update-user connection
+                    {:name name
+                     :yacht_name yacht_name
+                     :email email
+                     :id (:id user-id)})
+    (let [db-selected-dates (db-select-user-bookings-for-update connection
                                                               {:user_id (:id user-id)})
-        db-selected-dates-values (map #(:booked_date %) db-selected-dates)
-        bookings-to-delete (filter (fn [booking] (not (some #(= (:booked_date booking) %) selected_dates))) db-selected-dates)
-        bookings-to-add (filter (fn [booking] (not (some #(= booking %) db-selected-dates-values)))
-                                selected_dates)
-        _ (database-delete-bookings connection bookings-to-delete)
+          db-selected-dates-values (map #(:booked_date %) db-selected-dates)
+          bookings-to-delete (filter (fn [booking] (not (some #(= (:booked_date booking) %) selected_dates))) db-selected-dates)
+          bookings-to-add (filter (fn [booking] (not (some #(= booking %) db-selected-dates-values)))
+                                  selected_dates)
+          _ (database-delete-bookings connection bookings-to-delete)
 
-        inserted-bookings-ids (database-insert-bookings connection
-                                                        bookings-to-add
-                                                        user-id)
-        dates-to-inserted-booking-ids (map-dates-to-booking-ids inserted-bookings-ids
-                                                                bookings-to-add)
+          inserted-bookings-ids (database-insert-bookings connection
+                                                          bookings-to-add
+                                                          user-id)
+          dates-to-inserted-booking-ids (map-dates-to-booking-ids inserted-bookings-ids
+                                                                  bookings-to-add)
 
-        _ (database-insert-booking-log connection
-                                       dates-to-inserted-booking-ids
-                                       user-id
-                                       log-entry-booking)
-        _ (database-insert-booking-log connection
-                                       bookings-to-delete
-                                       user-id
-                                       log-entry-release)]
+          _ (database-insert-booking-log connection
+                                         dates-to-inserted-booking-ids
+                                         user-id
+                                         log-entry-booking)
+          _ (database-insert-booking-log connection
+                                         bookings-to-delete
+                                         user-id
+                                         log-entry-release)]
 
-  (success-booking-reply connection
-                         user-id
-                         name
-                         yacht_name
-                         email
-                         selected_dates)))
+      (success-booking-reply connection
+                             user-id
+                             name
+                             yacht_name
+                             email
+                             selected_dates))
+    (catch PSQLException pse
+      (handle-psql-error pse (:id user-id)))))
 
 (defn insert-booking [{:keys [name yacht_name email selected_dates]}]
   (let [validation-err (validate-booking-parameters name

@@ -80,7 +80,11 @@
          :yacht_name (:yacht_name user)
          :user_private_id (:secret_id user)
          :user_public_id (:id user)
-         :selected_dates selected_dates))
+         :selected_dates (or selected_dates [])))
+
+(defn set-selected-dates [selected_dates]
+  (swap! app-state assoc
+         :selected_dates (or selected_dates [])))
 
 (defn set-user-private-id [private_id]
   (swap! app-state assoc
@@ -177,7 +181,7 @@
                   (set-user user selected_dates)
                   (set-success-status "Varauksesi on talletettu. Varausvahvistus on lähetetty sähköpostiisi. Varausvahvistuksessa on linkki, jota voit käyttää varaustesi muokkaamiseen."))
             409 (do
-                  (clear-selected-days)
+                  (set-selected-dates selected_dates)
                   (set-error-status "Joku muu ehti valita samat päivät kuin sinä. Valitse uudet päivät."))
             (do
               (set-error-status "Varauksien tallettaminen epäonnistui. Yritä myöhemmin uudelleen.")))))))
