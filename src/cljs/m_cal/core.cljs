@@ -5,7 +5,8 @@
             [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
             [m-cal.utils :as u]
-            [cemerick.url :refer (url url-encode)])
+            [cemerick.url :refer (url url-encode)]
+            [cljsjs.babel-polyfill])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
