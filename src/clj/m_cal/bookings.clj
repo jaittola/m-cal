@@ -139,14 +139,13 @@
                                                                   bookings-to-add)
 
           _ (database-insert-booking-log connection
-                                         dates-to-inserted-booking-ids
-                                         user-id
-                                         db-common/log-entry-booking-book)
-          _ (database-insert-booking-log connection
                                          bookings-to-delete
                                          user-id
-                                         db-common/log-entry-booking-release)]
-
+                                         db-common/log-entry-booking-release)
+          _ (database-insert-booking-log connection
+                                         dates-to-inserted-booking-ids
+                                         user-id
+                                         db-common/log-entry-booking-book)]
       (success-booking-reply connection
                              user-id
                              name
