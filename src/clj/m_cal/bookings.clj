@@ -1,45 +1,11 @@
 (ns m-cal.bookings
   (:require [m-cal.config :as config]
             [m-cal.util :refer [parse-int]]
+            [m-cal.db-common :as db-common]
             [hugsql.core :as hugsql]
-            [clojure.java.jdbc :as jdbc]
-            [environ.core :as env]
-            [clojure.java.jdbc :as jdbc]
-            [jdbc.pool.c3p0 :as pool])
+            [clojure.java.jdbc :as jdbc])
   (:import [org.postgresql.util PSQLException]
            [java.util UUID]))
-
-(def log-entry-booking 1)
-(def log-entry-release 2)
-(def psql-unique-constraint-sqlstate 23505)
-
-;; Database spec. Based on the Heroku c3p0 sample code
-(defn db-uri []
-  (java.net.URI. (System/getenv "DATABASE_URL")))
-
-(defn db-user-and-password []
-  (let [userinfo (.getUserInfo (db-uri))]
-  (if (nil? userinfo)
-    nil
-    (let [[user pw] (clojure.string/split userinfo #":")]
-      {:user user
-       :password pw}))))
-
-(def dbspec
-  (delay
-   (pool/make-datasource-spec
-    (let [{:keys [user password]} (db-user-and-password)
-          uri (db-uri)
-          port (.getPort uri)
-          host (.getHost uri)
-          path (.getPath uri)]
-      {:classname "org.postgresql.Driver"
-       :subprotocol "postgresql"
-       :user user
-       :password password
-       :subname (if (= -1 port)
-                  (format "//%s%s" host path)
-                  (format "//%s:%s%s" host port path))}))))
 
 (hugsql/def-db-fns "app_queries/queries.sql")
 
@@ -104,11 +70,11 @@
      :body body3}))
 
 (defn load-all-bookings []
-  (jdbc/with-db-connection [connection @dbspec]
+  (jdbc/with-db-connection [connection @db-common/dbspec]
     (db-list-all-bookings connection)))
 
 (defn error-reply-409 [& [user-id]]
-  (try (jdbc/with-db-transaction [connection @dbspec]
+  (try (jdbc/with-db-transaction [connection @db-common/dbspec]
          (error-reply 409 "The dates you selected were already booked"
                       (db-list-all-bookings connection)
                       (when user-id (database-get-user-selections connection user-id))))
@@ -122,7 +88,7 @@
   (let [se (.getServerErrorMessage pse)
         sqlstate (.getSQLState se)]
     (println "Storing bookings to database failed: " (.toString pse) "; sqlstate: " sqlstate)
-    (if (= (parse-int sqlstate) psql-unique-constraint-sqlstate)
+    (if (= (parse-int sqlstate) db-common/psql-unique-constraint-sqlstate)
       (error-reply-409 user-id)
       (error-reply 500 "Storing bookings to database failed"))))
 
@@ -133,7 +99,7 @@
 (defn list-bookings-with-user [id]
   (if
       (nil? id) (error-reply 400 "Mandatory parameters missing.")
-      (try (jdbc/with-db-transaction [connection @dbspec]
+      (try (jdbc/with-db-transaction [connection @db-common/dbspec]
              (let [user (first (db-find-user-by-secret-id connection
                                                           {:user_secret_id (UUID/fromString id)}))
                    selected-dates (database-get-user-selections connection (:id user))]
@@ -179,11 +145,11 @@
           _ (database-insert-booking-log connection
                                          dates-to-inserted-booking-ids
                                          user-id
-                                         log-entry-booking)
+                                         db-common/log-entry-booking-book)
           _ (database-insert-booking-log connection
                                          bookings-to-delete
                                          user-id
-                                         log-entry-release)]
+                                         db-common/log-entry-booking-release)]
 
       (success-booking-reply connection
                              user-id
@@ -201,7 +167,7 @@
                                                     selected_dates)]
     (if validation-err
       validation-err
-      (try (jdbc/with-db-transaction [connection @dbspec]
+      (try (jdbc/with-db-transaction [connection @db-common/dbspec]
              (let [user-id (database-insert-user connection
                                                  name
                                                  yacht_name
@@ -214,7 +180,7 @@
                    _ (database-insert-booking-log connection
                                                   dates-to-booking-ids
                                                   user-id
-                                                  log-entry-booking)]
+                                                  db-common/log-entry-booking-book)]
                (success-booking-reply connection
                                       user-id
                                       name
@@ -232,7 +198,7 @@
     (cond
       validation-err validation-err
       (nil? secret_id) (error-reply 400 "Mandatory parameters missing.")
-      :else (try (jdbc/with-db-transaction [connection @dbspec]
+      :else (try (jdbc/with-db-transaction [connection @db-common/dbspec]
                    (let [user (first (db-find-user-by-secret-id connection
                                                                 {:user_secret_id (UUID/fromString secret_id)}))]
                      (if (nil? user) (error-reply 400 "No such user")
