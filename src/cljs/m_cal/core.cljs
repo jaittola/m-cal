@@ -11,8 +11,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vars
 
-(def app-locale "FI-fi")
-(def weekdays ["Su" "Ma" "Ti" "Ke" "To" "Pe" "La"])
 (def min-input-len 5)
 (def email-validation-regex #"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])")
 
@@ -242,10 +240,10 @@
       (->> (range (:required_days @ratom))
            (map (fn [dayidx]
                   (let [day (get days dayidx)]
-                       ^{:key (str "day-" dayidx)}
-                       [:div.selected_days_selections
-                        (if (some? day) (u/format-date day app-locale weekdays)
-                            [blank-element])]))))]]))
+                    ^{:key (str "day-" dayidx)}
+                    [:div.selected_days_selections
+                     (if (some? day) (u/format-date day)
+                         [blank-element])]))))]]))
 
 (defn selection_button_area [ratom]
   [:div.select_button_container

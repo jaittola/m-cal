@@ -6,15 +6,16 @@
 
 (def ymd-formatter (timef/formatters :year-month-day))
 (def fi-formatter (timef/formatter "dd.MM"))
+(def fi-formatter-long (timef/formatter "dd.MM.YYYY"))
 (def weekdays ["Su" "Ma" "Ti" "Ke" "To" "Pe" "La" "Su"])
 (def months ["Tammikuu" "Helmikuu" "Maaliskuu" "Huhtikuu"
              "Toukokuu" "Kesäkuu" "Heinäkuu" "Elokuu"
              "Syyskuu" "Lokakuu" "Marraskuu" "Joulukuu"])
 
-(defn format-date [date locale weekdays]
-  (let [d (js/Date. date)
-        weekday (nth weekdays (-> d .getDay))]
-    (str weekday " " (-> d (.toLocaleDateString locale)))))
+(defn format-date [isodate]
+  (let [date (timef/parse ymd-formatter isodate)
+        weekday-str (nth weekdays (time/day-of-week date))]
+    (str weekday-str " " (timef/unparse fi-formatter-long date))))
 
 (defn format-date2 [date weekday]
   (let [weekday-str (nth weekdays weekday)]
