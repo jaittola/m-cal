@@ -286,6 +286,7 @@
       (and is-booked-for-me is-in-future) [:button
                                           {:on-click #(remove-date-selection isoday)}
                                            "Poista valinta"]
+      (and is-booked-for-me (not is-in-future)) [booking-details booking]
       (and booking (not (= (:user_id booking) (:user_public_id @ratom)))) [booking-details booking]
       (and (nil? booking) (not is-in-future)) blank-element
       :else [:button
