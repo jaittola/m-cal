@@ -3,6 +3,8 @@
 
 (def log-entry-booking-book 1)
 (def log-entry-booking-release 2)
+(def log-entry-email 3)
+
 (def psql-unique-constraint-sqlstate 23505)
 
 ;; Database spec. Based on the Heroku c3p0 sample code

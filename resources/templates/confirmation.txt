@@ -1,0 +1,15 @@
+Hei!
+
+Olet varannut Särkälle vartiovuorot seuraaviksi päiviksi:
+
+[booked_dates]
+
+Varaajan nimi: [name]
+Varaajan sähköpostiosoite: [email]
+Veneen nimi: [yacht_name]
+
+Voit käydä muuttamassa vartiovuoroja tai jättämiäsi yhteystietoja osoitteessa
+[update_link].
+
+Jos haluat lisätietoja tai vartiovuoroissa on muuten epäselvyyksiä,
+ota yhteyttä [contact]

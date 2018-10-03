@@ -14,6 +14,7 @@ export DATABASE_URL="postgresql://mcal@localhost/mcaldb"  # URL of the PostgreSQ
 export FIRST_BOOKING_DATE="2018-09-01"     # First available booking date
 export LAST_BOOKING_DATE="2018-12-31"      # Last available booking date
 export REQUIRED_DAYS=2                     # Number of bookings required
+export BASE_URI_FOR_UPDATES="https://example.com/bookings/index" # URL of the application for update links
 ```
 
 Section "Setting up a development database" in this document
@@ -22,6 +23,42 @@ probably want something more permanent for production use; services
 like Heroku Postgres or Amazon RDS are good choices. If you want to
 set up and manage the database yourself, have a look at PostgreSQL's
 official documentation.
+
+### E-mail confirmations
+
+To enable the sending of email confirmations after bookings using
+SendGrid, you must get a SendGrid account and place the API key into
+the `SENDGRID_API_KEY` environment variable. If `SENDGRID_API_KEY`
+does not exist in the environment, sending e-mail confirmation
+messages is disabled.
+
+To disable email confirmation sending even though you have
+`SENDGRID_API_KEY` defined, set environment variable
+`EMAIL_DISABLED=1`. This setting may be useful, for
+example, if you want to stop sending e-mails in Heroku but keep the
+API key in place.
+
+The e-mail confirmation message is read from
+resources/templates/confirmation.txt. It contains fields that will be
+replaced with the content of the booking: `[booked_dates]`, `[name]`,
+`[yacht_name]`, `[email]`, and `[update_link]`. In addition, the field
+`[contact]` will be substituted with value of `CONTACT_ADDR`
+environment variable.
+
+The environment variables [EMAIL_CONFIRMATION_FROM] and
+[EMAIL_CONFIRMATION_SUBJECT] define the sender and subject of the
+confirmation, respectively.
+
+Below is a summary of the e-mail configuration:
+
+```
+export SENDGRID_API_KEY=...
+export CONTACT_ADDR="sähköpostitse (test@example.com)."
+export EMAIL_CONFIRMATION_FROM="test@example.com"
+export EMAIL_CONFIRMATION_SUBJECT="Vartiovuorovaraukset"
+```
+
+### HTTP Basic Authentication
 
 You can specify environment variables to protect the user interface
 with HTTP Basic-Auth.
@@ -34,8 +71,15 @@ export BOOKING_PASSWORD=password
 export BOOKING_REALM="Vartiovuorovaraukset"
 
 # To use these values, you can run
-DATABASE_URL="postgresql://mcal@localhost/mcaldb" FIRST_BOOKING_DATE="2018-09-01" LAST_BOOKING_DATE="2018-12-31" REQUIRED_DAYS=2 BOOKING_USERNAME=user BOOKING_PASSWORD=password BOOKING_REALM="Varaukset" lein ring server-headless
+CONTACT_ADDR="sähköpostitse (test@example.com)." EMAIL_CONFIRMATION_FROM=test@example.com EMAIL_CONFIRMATION_SUBJECT="Vartiovuorovaraukset" DATABASE_URL="postgresql://mcal@localhost/mcaldb" FIRST_BOOKING_DATE="2018-09-01" LAST_BOOKING_DATE="2018-12-31" REQUIRED_DAYS=2 BOOKING_USERNAME=user BOOKING_PASSWORD=password BOOKING_REALM="Varaukset" BASE_URI_FOR_UPDATES="http://localhost:3000/bookings/index" lein ring server-headless
 ```
+
+I strongly recommend using the Basic Authentication because otherwise
+the API will be completely open if deployed in the open Internet. The
+authentication can be disabled to help with development work.
+
+A better authentication mechanism than HTTP Basic Authentication
+should be implemented. It just does not exist, yet.
 
 ## Clojure development instructions
 

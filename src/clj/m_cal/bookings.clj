@@ -1,6 +1,7 @@
 (ns m-cal.bookings
   (:require [m-cal.config :as config]
             [m-cal.util :refer [parse-int]]
+            [m-cal.email-confirmation :as email-confirmation]
             [m-cal.db-common :as db-common]
             [hugsql.core :as hugsql]
             [clojure.java.jdbc :as jdbc])
@@ -47,6 +48,9 @@
           :booked_date date})
        booking-id-containers selected_dates))
 
+(defn update-uri [user-id]
+  (str (config/base-uri-for-updates) "?user=" (:secret_id user-id)))
+
 (defn success-booking-reply [connection user-id name yacht_name email selected_dates]
   {:status 200
    :body {:user {:id (:id user-id)
@@ -56,7 +60,8 @@
                  :email email}
           :selected_dates selected_dates
           :all_bookings (db-list-all-bookings connection)
-          :calendar_config (config/calendar-config)}})
+          :calendar_config (config/calendar-config)
+          :update_uri (update-uri user-id)}})
 
 (defn error-reply [code msg & [bookings-body selected-dates]]
   (let [body (merge {:error_result msg}
@@ -146,6 +151,11 @@
                                          dates-to-inserted-booking-ids
                                          user-id
                                          db-common/log-entry-booking-book)]
+      (email-confirmation/send-confirmation name
+                                            email
+                                            yacht_name
+                                            (update-uri user-id)
+                                            selected_dates)
       (success-booking-reply connection
                              user-id
                              name
@@ -176,6 +186,11 @@
                                                   dates-to-booking-ids
                                                   user-id
                                                   db-common/log-entry-booking-book)]
+               (email-confirmation/send-confirmation name
+                                                     email
+                                                     yacht_name
+                                                     (update-uri user-id)
+                                                     selected_dates)
                (success-booking-reply connection
                                       user-id
                                       name
