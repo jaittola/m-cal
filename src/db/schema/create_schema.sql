@@ -22,6 +22,6 @@ CREATE TABLE IF NOT EXISTS booking_log (
        users_id INTEGER NOT NULL REFERENCES users(id),
        booked_date DATE NOT NULL,
        timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
-       booking_or_release SMALLINT NOT NULL -- 1 = booking, 2 = release
-              CHECK (booking_or_release IN (1, 2))
+       operation SMALLINT NOT NULL -- 1 = booking, 2 = release, 3 = confirmation email
+              CONSTRAINT booking_log_operation_check CHECK (operation IN (1, 2, 3))
 );

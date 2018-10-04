@@ -34,7 +34,7 @@
                                        {:booked_date (:booked_date id-date)
                                         :users_id (:id user-id)
                                         :booking_id (:booking_id id-date)
-                                        :booking_or_release op}))
+                                        :operation op}))
               dates-to-booking-ids)))
 
 (defn database-get-user-selections [connection user-id]
