@@ -23,5 +23,11 @@ CREATE TABLE IF NOT EXISTS booking_log (
        booked_date DATE NOT NULL,
        timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
        operation SMALLINT NOT NULL -- 1 = booking, 2 = release, 3 = confirmation email
-              CONSTRAINT booking_log_operation_check CHECK (operation IN (1, 2, 3))
+              CONSTRAINT booking_log_operation_check CHECK (operation IN (1, 2, 3, 4))
+);
+
+CREATE TABLE IF NOT EXISTS email_confirmation_queue (
+       id SERIAL PRIMARY KEY,
+       users_id INTEGER UNIQUE REFERENCES users(id),
+       timestamp TIMESTAMP NOT NULL DEFAULT NOW()
 );

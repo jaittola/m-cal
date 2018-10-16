@@ -28,15 +28,6 @@
     (let [ids (doall (map #(:booking_id %) bookings-to-delete))]
       (db-delete-booking connection {:ids ids}))))
 
-(defn database-insert-booking-log [connection dates-to-booking-ids user-id op]
-  (doall (map (fn [id-date]
-                (db-insert-booking-log connection
-                                       {:booked_date (:booked_date id-date)
-                                        :users_id (:id user-id)
-                                        :booking_id (:booking_id id-date)
-                                        :operation op}))
-              dates-to-booking-ids)))
-
 (defn database-get-user-selections [connection user-id]
   (->> (db-select-user-bookings connection
                                 {:user_id user-id})
@@ -48,9 +39,6 @@
           :booked_date date})
        booking-id-containers selected_dates))
 
-(defn update-uri [user-id]
-  (str (config/base-uri-for-updates) "?user=" (:secret_id user-id)))
-
 (defn success-booking-reply [connection user-id name yacht_name email selected_dates]
   {:status 200
    :body {:user {:id (:id user-id)
@@ -61,7 +49,7 @@
           :selected_dates selected_dates
           :all_bookings (db-list-all-bookings connection)
           :calendar_config (config/calendar-config)
-          :update_uri (update-uri user-id)}})
+          :update_uri (config/update-uri user-id)}})
 
 (defn error-reply [code msg & [bookings-body selected-dates]]
   (let [body (merge {:error_result msg}
@@ -143,19 +131,15 @@
           dates-to-inserted-booking-ids (map-dates-to-booking-ids inserted-bookings-ids
                                                                   bookings-to-add)
 
-          _ (database-insert-booking-log connection
-                                         bookings-to-delete
-                                         user-id
-                                         db-common/log-entry-booking-release)
-          _ (database-insert-booking-log connection
-                                         dates-to-inserted-booking-ids
-                                         user-id
-                                         db-common/log-entry-booking-book)]
-      (email-confirmation/send-confirmation name
-                                            email
-                                            yacht_name
-                                            (update-uri user-id)
-                                            selected_dates)
+          _ (db-common/database-insert-booking-log connection
+                                                   bookings-to-delete
+                                                   user-id
+                                                   db-common/log-entry-booking-release)
+          _ (db-common/database-insert-booking-log connection
+                                                   dates-to-inserted-booking-ids
+                                                   user-id
+                                                   db-common/log-entry-booking-book)]
+      (db-add-to-confirmation-queue connection {:users_id (:id user-id)})
       (success-booking-reply connection
                              user-id
                              name
@@ -182,15 +166,11 @@
                                                           user-id)
                    dates-to-booking-ids (map-dates-to-booking-ids bookings-ids
                                                                   selected_dates)
-                   _ (database-insert-booking-log connection
-                                                  dates-to-booking-ids
-                                                  user-id
-                                                  db-common/log-entry-booking-book)]
-               (email-confirmation/send-confirmation name
-                                                     email
-                                                     yacht_name
-                                                     (update-uri user-id)
-                                                     selected_dates)
+                   _ (db-common/database-insert-booking-log connection
+                                                            dates-to-booking-ids
+                                                            user-id
+                                                            db-common/log-entry-booking-book)]
+               (db-add-to-confirmation-queue connection {:users_id (:id user-id)})
                (success-booking-reply connection
                                       user-id
                                       name

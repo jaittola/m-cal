@@ -1,11 +1,15 @@
 (ns m-cal.db-common
-  (:require [jdbc.pool.c3p0 :as pool]))
+  (:require [jdbc.pool.c3p0 :as pool]
+            [hugsql.core :as hugsql]))
 
 (def log-entry-booking-book 1)
 (def log-entry-booking-release 2)
 (def log-entry-email 3)
+(def log-entry-email-disabled 4)
 
 (def psql-unique-constraint-sqlstate 23505)
+
+(hugsql/def-db-fns "app_queries/queries.sql")
 
 ;; Database spec. Based on the Heroku c3p0 sample code
 (defn db-uri []
@@ -34,3 +38,12 @@
        :subname (if (= -1 port)
                   (format "//%s%s" host path)
                   (format "//%s:%s%s" host port path))}))))
+
+(defn database-insert-booking-log [connection dates-to-booking-ids user-id op]
+  (doall (map (fn [id-date]
+                (db-insert-booking-log connection
+                                       {:booked_date (:booked_date id-date)
+                                        :users_id (:id user-id)
+                                        :booking_id (:booking_id id-date)
+                                        :operation op}))
+              dates-to-booking-ids)))

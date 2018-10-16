@@ -26,6 +26,9 @@
 (defn base-uri-for-updates []
   (env :base-uri-for-updates))
 
+(defn update-uri [user-id]
+  (str (base-uri-for-updates) "?user=" (:secret_id user-id)))
+
 (defn verify-config []
   (when (some #(nil? %)
               [(env :first-booking-date)

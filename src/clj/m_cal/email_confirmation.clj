@@ -1,6 +1,7 @@
 (ns m-cal.email-confirmation
   (:require [m-cal.config :as config]
             [m-cal.email-confirmation-sendgrid :as email-sendgrid]
+            [m-cal.db-common :as db-common]
             [clojure.java.io :as io]
             [clojure.string :as string]
             [clj-time.core :as time]
@@ -50,4 +51,6 @@
         {:keys [from subject]} (config/email-parameters)]
     (if (and from subject)
       (email-sendgrid/send-email-confirmation from subject email message)
-      (println "Not sending e-mail confirmation because both 'from' and 'subject' must be defined"))))
+      (do
+        (println "Not sending e-mail confirmation because both 'from' and 'subject' must be defined")
+        db-common/log-entry-email-disabled))))

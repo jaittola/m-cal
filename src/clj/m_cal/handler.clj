@@ -8,7 +8,8 @@
             [ring.middleware.basic-authentication :as basicauth]
             [environ.core :refer [env]]
             [m-cal.bookings :as bookings]
-            [m-cal.config :as config])
+            [m-cal.config :as config]
+            [m-cal.email-confirmation-sender :as email-sender])
   (:gen-class))
 
 (defn get-auth-params []
@@ -72,7 +73,9 @@
   []
   (config/verify-config)
   (when (nil? (env :database-url))
-    (throw (Error. "You must define the database URI in environment variable DATABASE_URL"))))
+    (throw (Error. "You must define the database URI in environment variable DATABASE_URL")))
+    (email-sender/send-email-confirmations)
+  )
 
 (defn -main [& [port]]
   (setup)
