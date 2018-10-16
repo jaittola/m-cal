@@ -179,7 +179,7 @@
           (case status
             200 (do
                   (set-user user selected_dates)
-                  (set-success-status "Varauksesi on talletettu. Varausvahvistus on lähetetty sähköpostiisi. Varausvahvistuksessa on linkki, jota voit käyttää varaustesi muokkaamiseen."))
+                  (set-success-status "Varauksesi on talletettu. Järjestelmä lähettää varausvahvistuksen antamaasi sähköpostiosoitteeseen. Varausvahvistuksessa on linkki, jota voit käyttää varaustesi muokkaamiseen."))
             409 (do
                   (set-selected-dates selected_dates)
                   (set-error-status "Joku muu ehti valita samat päivät kuin sinä. Valitse uudet päivät."))
