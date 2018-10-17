@@ -58,6 +58,34 @@ export EMAIL_CONFIRMATION_FROM="test@example.com"
 export EMAIL_CONFIRMATION_SUBJECT="Vartiovuorovaraukset"
 ```
 
+#### Configuring SendGrid for reliable mail delivery
+
+SendGrid in its default configuration edits the e-mails in several
+ways. It adds, for example, a footer, and an invisible image for
+tracking purposes. It also rewrites all links in the e-mails to track
+clicks by redirecting all links through its own site. Such items in
+e-mails are typical for spam, and messages sent with the default
+settings may have hard time passing spam filters. In addition, you
+probably do not need click tracking since links in the confirmation
+e-mails should lead to your service.
+
+To configure SendGrid not to edit the messages, perform the following
+configuration in the SendGrid UI Settings:
+
+ * in Mail Settings section, set
+   * "Event notification" *Off*
+   * "Footer" *Off*
+   * "Plain Content" *On*
+ * in Tracking section, set
+   * "Click tracking" *Off*
+   * "Google Analytics" *Off*
+   * "Open Tracking" *Off*
+   * "Subscription Tracking" *Off*
+
+SendGrid may have other relevant settings. Please go through the
+SendGrid configuration UI and make sure that the settings are suitable
+for you.
+
 ### HTTP Basic Authentication
 
 You can specify environment variables to protect the user interface
