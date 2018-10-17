@@ -251,12 +251,19 @@
                          [blank-element])]))))]]))
 
 (defn selection_button_area [ratom]
-  [:div.select_button_container
-   [:button.selection {:disabled (or
-                                  (:request_in_progress @ratom)
-                                  (not (all-input-validates ratom)))
-                       :on-click #(save-bookings ratom)}
-    "Varaa valitsemasi vuorot"]])
+  (let [updating (some? (:user_private_id @ratom))]
+    [:div.select_button_container
+     [:button.selection {:disabled (or
+                                    (:request_in_progress @ratom)
+                                    (not (all-input-validates ratom)))
+                         :on-click #(save-bookings ratom)}
+      (if updating
+        "Tallenna muutokset"
+        "Varaa valitsemasi vuorot")]
+     (when updating
+       [:button.selection {:disabled (:request_in_progress @ratom)
+                           :on-click #(load-bookings ratom)}
+        "Peruuta muutokset"])]))
 
 (defn status-area [status-property class ratom]
    (let [status (status-property @ratom)]
