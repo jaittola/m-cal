@@ -361,7 +361,6 @@
 
 (defn page [ratom]
   [:div
-   [logout-link]
    [:div.header]
    [:h1 "Merenkävijät ry"]
    [:h2 "Särkän vartiovuorojen varaukset"]
