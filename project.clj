@@ -44,11 +44,11 @@
 
   :profiles {:dev
              {:dependencies [
-                             [figwheel-sidecar "0.5.15"]
+                             [figwheel-sidecar "0.5.16"]
                              [com.cemerick/piggieback "0.2.1"]
                              [binaryage/devtools "0.9.9"]]
 
-              :plugins      [[lein-figwheel "0.5.15"]]
+              :plugins      [[lein-figwheel "0.5.16"]]
               }
              :uberjar {
                        :prep-tasks [["cljsbuild" "once" "min"] ["less" "once"] "compile"]
