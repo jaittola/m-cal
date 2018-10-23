@@ -194,4 +194,5 @@ lein cljsbuild once min
 
 ## License
 
-m-cal is in the public domain.
+This software uses the so-called 3-clause BSD license. See LICENSE
+file in this repository for details.
