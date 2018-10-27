@@ -22,12 +22,13 @@
                  [alxlit/autoclave "0.2.0" :exclusions [com.google.guava/guava]]]
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-less "1.7.5"]
-            [lein-ring "0.12.1"]]
+            [lein-ring "0.12.4"]]
 
   :min-lein-version "2.5.3"
   :uberjar-name "m-cal-standalone.jar"
   :ring {:init m-cal.handler/setup
-         :handler m-cal.handler/app}
+         :handler m-cal.handler/app
+         :reload-paths ["src/clj"]}
   :source-paths ["src/clj"]
   :resource-paths [ "resources" "src/db/queries" ]
   :main m-cal.handler
@@ -50,6 +51,11 @@
 
               :plugins      [[lein-figwheel "0.5.16"]]
               }
+
+             :test
+             {:test-paths ["test/clj"]
+              :dependencies [[clj-http "3.9.1"]]}
+
              :uberjar {
                        :prep-tasks [["cljsbuild" "once" "min"] ["less" "once"] "compile"]
                        :omit-source true

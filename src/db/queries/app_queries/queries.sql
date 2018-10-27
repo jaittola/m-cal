@@ -117,3 +117,13 @@ DELETE FROM
 email_confirmation_queue
 WHERE id = :id;
 
+-- :name db-reset-everything-dangerously :!
+-- :doc Delete users and their bookings. Used for testing purposes only.
+TRUNCATE TABLE
+email_confirmation_queue;
+TRUNCATE TABLE
+booking_log;
+TRUNCATE TABLE
+booking;
+TRUNCATE TABLE
+users CASCADE;
