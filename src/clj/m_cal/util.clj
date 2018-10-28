@@ -10,7 +10,10 @@
 (def helsinki-tz (t/time-zone-for-id "Europe/Helsinki"))
 
 (defn parse-date-string [date-string]
-  (tf/parse-local-date date-string))
+  (let [date (tf/parse-local-date date-string)]
+    (if date
+      date
+      (throw (ex-info (str "incorrect date string: " date-string) {})))))
 
 (defn today-as-date []
   (if (env :testing)
@@ -19,3 +22,4 @@
     (-> (t/now)
         (t/to-time-zone helsinki-tz)
         (.toLocalDate))))
+

@@ -3,8 +3,11 @@
             [m-cal.util :refer [parse-int]]
             [m-cal.email-confirmation :as email-confirmation]
             [m-cal.db-common :as db-common]
+            [m-cal.util :refer [parse-date-string]]
+            [m-cal.validation :as validation]
             [hugsql.core :as hugsql]
-            [clojure.java.jdbc :as jdbc])
+            [clojure.java.jdbc :as jdbc]
+            [clojure.spec.alpha :as s])
   (:import [org.postgresql.util PSQLException]
            [java.util UUID]))
 
@@ -102,6 +105,45 @@
            (catch PSQLException pse
              (handle-psql-error pse)))))
 
+(defn assert-is-in-allowed-range [date]
+  (let [{:keys [first_date last_date]} (config/calendar-config)]
+    (if (not (and (<= (.compareTo first_date date) 0)
+                  (<= (.compareTo date last_date) 0)))
+      (throw (ex-info (str "date out of range: " date) {})))))
+
+(defn string-of-at-least [n] (s/and string?
+                                    #(>= (.length %) n)))
+;; TODO: share this with frontend code
+(def email-validation-regex #"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])")
+
+(def local-date-string-regex #"[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]") ; just a format check
+
+(s/def ::name (string-of-at-least 5))
+(s/def ::yacht_name (string-of-at-least 5))
+(s/def ::email (s/and (string-of-at-least 5)
+                      #(re-matches email-validation-regex %)))
+(s/def ::local-date (s/and string?
+                           #(re-matches local-date-string-regex %)))
+(s/def ::selected_dates (s/tuple ::local-date ::local-date))
+(s/def ::booking (s/keys :req-un [::name ::yacht_name ::email ::selected_dates]))
+
+(def booking-spec-validator (validation/spec-validator ::booking))
+(def booking-date-parser-validator (validation/assert-validator
+                                     (fn [params]
+                                       (doall (map parse-date-string (:selected_dates params))))))
+(def booking-date-range-validator (validation/assert-validator
+                                    (fn [{:keys [selected_dates]}]
+                                      (doall (map assert-is-in-allowed-range selected_dates)))))
+
+;; when inserting booking we validate that dates are in proper range.
+(def insert-booking-validator (validation/chain [booking-spec-validator
+                                                 booking-date-parser-validator
+                                                 booking-date-range-validator]))
+;; when updating bookings one of the dates can be in history, too
+(def update-booking-validator (validation/chain [booking-spec-validator
+                                                 booking-date-parser-validator]))
+
+
 (defn validate-booking-parameters [name yacht_name email selected_dates]
   (let [required-days (config/required-days)]
     (cond
@@ -149,13 +191,10 @@
     (catch PSQLException pse
       (handle-psql-error pse (:id user-id)))))
 
-(defn insert-booking [{:keys [name yacht_name email selected_dates]}]
-  (let [validation-err (validate-booking-parameters name
-                                                    yacht_name
-                                                    email
-                                                    selected_dates)]
-    (if validation-err
-      validation-err
+(defn insert-booking [params]
+  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error] :as params} (insert-booking-validator params)]
+    (if validation-error
+      (error-reply 400 validation-error)
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
              (let [user-id (database-insert-user connection
                                                  name

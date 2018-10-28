@@ -1,6 +1,7 @@
 (defproject m-cal "0.1.0-SNAPSHOT"
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.339"]
+                 [org.clojure/spec.alpha "0.2.176"]
                  [reagent "0.8.1"]
                  [com.andrewmcveigh/cljs-time "0.5.2"]
                  [cljs-http "0.1.45"]
