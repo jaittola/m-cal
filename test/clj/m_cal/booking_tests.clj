@@ -1,5 +1,5 @@
 (ns m-cal.booking-tests
-  (:require [clojure.test :refer [deftest is use-fixtures]]
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [m-cal.test-utils :as test-utils]))
 
 (use-fixtures :each test-utils/reset-db-fixture)
@@ -25,3 +25,38 @@
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-12"} b3))
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-13"} b4))))
 
+(defn is-thrown-with-error-response* [message-re body-re body-f]
+  (try
+    (body-f)
+    (is (= :expected-fail :but-success)) ;; clumsy
+    (catch Exception e
+      (let [response-body (->> e
+                               ex-data
+                               :body)]
+        (is (re-matches message-re (.getMessage e)))
+        (is (re-matches body-re response-body))))))
+
+(def test-booking {:name "Tom Anderson"
+                   :yacht_name "s/y Meriruoho"
+                   :email "tom@example.com"
+                   :selected_dates ["2018-11-12" "2018-11-13"]})
+
+(deftest booking-is-validated
+  (testing "all fields are required"
+    (doseq [missing-key [:name :yacht_name :email :selected_dates]]
+      (is-thrown-with-error-response* #".*status 400.*" #".*Mandatory parameters missing.*"
+        #(test-utils/add-test-booking (dissoc test-booking missing-key)))))
+
+  (testing "dates must be in proper format, take I"
+    (is-thrown-with-error-response* #".*status 500.*" #".*Storing bookings to database failed.*" ;; FIXME: 400, better message
+                                    #(test-utils/add-test-booking (assoc test-booking :selected_dates ["abcd" "2018-11-13"]))))
+
+  (testing "dates must be in proper format, take II"
+    (is-thrown-with-error-response* #".*status 500.*" #".*Storing bookings to database failed.*" ;; FIXME: 400, better message
+      #(test-utils/add-test-booking (assoc test-booking :selected_dates ["2018-13-12" "2018-11-13"]))))
+
+  (testing "dates cannot be in the past"
+    (is (= 1 1)))
+
+  (testing "dates cannot be too far into the future"
+    (is (= 1 1))))
