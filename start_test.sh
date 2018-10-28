@@ -7,5 +7,6 @@ export REQUIRED_DAYS=2
 export BASE_URI_FOR_UPDATES="https://example.com/bookings/index"
 
 export TESTING=true
+export TESTING_DATE="2018-10-15"
 
 lein ring server-headless

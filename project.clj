@@ -18,6 +18,7 @@
                  [com.cemerick/url "0.1.1"]
                  [cljsjs/babel-polyfill "6.20.0-2"]
                  [clj-http "3.9.1"]
+                 [clj-time "0.15.0"]
                  [org.clojure/data.json "0.2.6"]
                  [alxlit/autoclave "0.2.0" :exclusions [com.google.guava/guava]]]
   :plugins [[lein-cljsbuild "1.1.4"]
@@ -53,8 +54,7 @@
               }
 
              :test
-             {:test-paths ["test/clj"]
-              :dependencies [[clj-http "3.9.1"]]}
+             {:test-paths ["test/clj"]}
 
              :uberjar {
                        :prep-tasks [["cljsbuild" "once" "min"] ["less" "once"] "compile"]
