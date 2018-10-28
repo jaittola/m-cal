@@ -9,3 +9,9 @@
   (jdbc/with-db-transaction [connection @db-common/dbspec]
                             (db-reset-everything-dangerously connection)))
 
+(defn get-user [name]
+  (jdbc/with-db-transaction [connection @db-common/dbspec]
+                            (->> (db-get-all-users connection)
+                                 (filter #(= name (:username %)))
+                                 (map #(update % :secret_id str))
+                                 first)))

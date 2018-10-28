@@ -1,6 +1,5 @@
 (ns m-cal.booking-tests
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [m-cal.bookings :as bookings]
             [m-cal.test-utils :as test-utils]))
 
 (use-fixtures :each test-utils/reset-db-fixture)
@@ -31,10 +30,7 @@
     (body-f)
     (is (= :expected-fail :but-success)) ;; clumsy
     (catch Exception e
-      (let [response-body (->> e
-                               ex-data
-                               :body)]
-        (is (re-matches message-re (.getMessage e)))))))
+      (is (re-matches message-re (.getMessage e))))))
 
 (def test-booking {:name "Tom Anderson"
                    :yacht_name "s/y Meriruoho"
@@ -59,8 +55,38 @@
     (is-thrown-with-error-response* #".*status 400.*"
       #(test-utils/add-test-booking (assoc test-booking :selected_dates ["2018-06-12" "2018-11-13"]))))
 
-  (testing "dates cannot be too far into the future"
-    (is (= 1 1))))
+  (testing "dates for inserts cannot be before today"
+    (is-thrown-with-error-response* #".*status 400.*"
+      #(test-utils/add-test-booking (assoc test-booking :selected_dates ["2018-09-12" "2018-11-13"]))))
 
-(deftest date-range-validation
-  (is (thrown? java.lang.Exception (bookings/assert-is-in-allowed-range "2018-10-11"))))
+  (testing "dates cannot be too far into the future"
+    (is-thrown-with-error-response* #".*status 400.*"
+      #(test-utils/add-test-booking (assoc test-booking :selected_dates ["2018-11-12" "2019-01-13"])))))
+
+(deftest can-update-booking
+  (test-utils/add-test-booking {:name "Tom Anderson"
+                                :yacht_name "s/y Meriruoho"
+                                :email "tom@example.com"
+                                :selected_dates ["2018-11-12" "2018-11-13"]})
+  (test-utils/update-booking (test-utils/get-secret-id "Tom Anderson")
+                             {:name "Tom Anderson"
+                              :yacht_name "s/y Meriruoho"
+                              :email "tom@example.com"
+                              :selected_dates ["2018-11-15" "2018-11-16"]})
+  (let [[b1 b2] (test-utils/get-all-bookings)]
+    (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-15"} b1))
+    (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-16"} b2))))
+
+(deftest booking-update-can-contain-dates-in-the-past-gaping-whole-here-for-hackers
+  (test-utils/add-test-booking {:name "Tom Anderson"
+                                :yacht_name "s/y Meriruoho"
+                                :email "tom@example.com"
+                                :selected_dates ["2018-11-12" "2018-11-13"]})
+  (test-utils/update-booking (test-utils/get-secret-id "Tom Anderson")
+                             {:name "Tom Anderson"
+                              :yacht_name "s/y Meriruoho"
+                              :email "tom@example.com"
+                              :selected_dates ["2018-09-15" "2018-09-16"]})
+  (let [[b1 b2] (test-utils/get-all-bookings)]
+    (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-09-15"} b1))
+    (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-09-16"} b2))))

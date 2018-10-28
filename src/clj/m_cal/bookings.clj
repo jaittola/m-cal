@@ -1,9 +1,8 @@
 (ns m-cal.bookings
   (:require [m-cal.config :as config]
             [m-cal.util :refer [parse-int]]
-            [m-cal.email-confirmation :as email-confirmation]
             [m-cal.db-common :as db-common]
-            [m-cal.util :refer [parse-date-string]]
+            [m-cal.util :refer [parse-date-string today]]
             [m-cal.validation :as validation]
             [hugsql.core :as hugsql]
             [clojure.java.jdbc :as jdbc]
@@ -105,11 +104,18 @@
            (catch PSQLException pse
              (handle-psql-error pse)))))
 
+(defn assert-is-in-range [date first-date last-date]
+  (if (not (and (<= (.compareTo first-date date) 0)
+                (<= (.compareTo date last-date) 0)))
+    (throw (ex-info (str "date out of range: " date) {}))))
+
+(defn assert-is-in-allowed-range-for-insert [date]
+  (let [{:keys [last_date]} (config/calendar-config)]
+    (assert-is-in-range date (today) last_date)))
+
 (defn assert-is-in-allowed-range [date]
   (let [{:keys [first_date last_date]} (config/calendar-config)]
-    (if (not (and (<= (.compareTo first_date date) 0)
-                  (<= (.compareTo date last_date) 0)))
-      (throw (ex-info (str "date out of range: " date) {})))))
+    (assert-is-in-range date first_date last_date)))
 
 (defn string-of-at-least [n] (s/and string?
                                     #(>= (.length %) n)))
@@ -131,6 +137,9 @@
 (def booking-date-parser-validator (validation/assert-validator
                                      (fn [params]
                                        (doall (map parse-date-string (:selected_dates params))))))
+(def booking-date-future-range-validator (validation/assert-validator
+                                           (fn [{:keys [selected_dates]}]
+                                             (doall (map assert-is-in-allowed-range-for-insert selected_dates)))))
 (def booking-date-range-validator (validation/assert-validator
                                     (fn [{:keys [selected_dates]}]
                                       (doall (map assert-is-in-allowed-range selected_dates)))))
@@ -138,10 +147,11 @@
 ;; when inserting booking we validate that dates are in proper range.
 (def insert-booking-validator (validation/chain [booking-spec-validator
                                                  booking-date-parser-validator
-                                                 booking-date-range-validator]))
+                                                 booking-date-future-range-validator]))
 ;; when updating bookings one of the dates can be in history, too
 (def update-booking-validator (validation/chain [booking-spec-validator
-                                                 booking-date-parser-validator]))
+                                                 booking-date-parser-validator
+                                                 booking-date-range-validator]))
 
 
 (defn validate-booking-parameters [name yacht_name email selected_dates]
@@ -192,7 +202,7 @@
       (handle-psql-error pse (:id user-id)))))
 
 (defn insert-booking [params]
-  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error] :as params} (insert-booking-validator params)]
+  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (insert-booking-validator params)]
     (if validation-error
       (error-reply 400 validation-error)
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
@@ -219,13 +229,10 @@
            (catch PSQLException pse
              (handle-psql-error pse))))))
 
-(defn update-booking [secret_id {:keys [name yacht_name email selected_dates]}]
-  (let [validation-err (validate-booking-parameters name
-                                                    yacht_name
-                                                    email
-                                                    selected_dates)]
+(defn update-booking [secret_id params]
+  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (update-booking-validator params)]
     (cond
-      validation-err validation-err
+      validation-error (error-reply 400 validation-error)
       (nil? secret_id) (error-reply 400 "Mandatory parameters missing.")
       :else (try (jdbc/with-db-transaction [connection @db-common/dbspec]
                    (let [user (first (db-find-user-by-secret-id connection

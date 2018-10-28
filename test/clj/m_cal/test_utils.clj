@@ -25,3 +25,15 @@
       (read-str :key-fn keyword)
       :all_bookings))
 
+(defn get-secret-id
+  [name]
+  (-> (client/get (str "http://localhost:3000/test/user/" name))
+      :body
+      (read-str :key-fn keyword)
+      :user
+      :secret_id))
+
+(defn update-booking [secret-id booking]
+  (client/put (str "http://localhost:3000/bookings/api/1/bookings/" secret-id)
+              {:body (json-str booking)
+               :headers {"Content-Type" "application/json"}}))

@@ -15,11 +15,11 @@
       date
       (throw (ex-info (str "incorrect date string: " date-string) {})))))
 
-(defn today-as-date []
+(defn today[]
   (if (env :testing)
-    (-> (env :testing-date)
-        parse-date-string)
+    (-> (env :testing-date))
     (-> (t/now)
         (t/to-time-zone helsinki-tz)
-        (.toLocalDate))))
+        (.toLocalDate)
+        str)))
 

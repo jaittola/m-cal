@@ -59,6 +59,7 @@
 (defroutes test-routes
   (POST "/reset" [] (do (testing/reset-db)
                       {:status 200 :body "ok"}))
+  (GET "/user/:name" [name] {:status 200 :body {:user (testing/get-user name)}})
   (route/not-found "Not Found"))
 
 (defn in-test-env [handler]
@@ -74,8 +75,10 @@
                   (wrap-basicauth-if-auth-params booking-routes (get-auth-params)))
          (middleware/wrap-json-body {:keywords? true})
          (middleware/wrap-json-response))
-     (context "/test" []
-       (in-test-env test-routes))
+     (-> (context "/test" []
+                  (in-test-env test-routes))
+         (middleware/wrap-json-body {:keywords? true})
+         (middleware/wrap-json-response))
      (-> other-routes
          (middleware/wrap-json-body)
          (middleware/wrap-json-response))
