@@ -25,43 +25,35 @@
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-12"} b3))
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-13"} b4))))
 
-(defn is-thrown-with-error-response* [message-re body-f]
-  (try
-    (body-f)
-    (is (= :expected-fail :but-success)) ;; clumsy
-    (catch Exception e
-      (is (re-matches message-re (.getMessage e))))))
-
 (def test-booking {:name "Tom Anderson"
                    :yacht_name "s/y Meriruoho"
                    :email "tom@example.com"
                    :selected_dates ["2018-11-12" "2018-11-13"]})
 
+(defn assert-add-booking-fails-with-400
+  [booking]
+  (let [response (test-utils/add-test-booking booking {:throw-exceptions false})]
+    (is (= 400 (:status response)))))
+
 (deftest booking-is-validated
   (testing "all fields are required"
     (doseq [missing-key [:name :yacht_name :email :selected_dates]]
-      (is-thrown-with-error-response* #".*status 400.*"
-        #(test-utils/add-test-booking (dissoc test-booking missing-key)))))
+      (assert-add-booking-fails-with-400 (dissoc test-booking missing-key))))
 
   (testing "dates must be in proper format, take I"
-    (is-thrown-with-error-response* #".*status 400.*"
-                                    #(test-utils/add-test-booking (assoc test-booking :selected_dates ["abcd" "2018-11-13"]))))
+    (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["abcd" "2018-11-13"])))
 
   (testing "dates must be in proper format, take II"
-    (is-thrown-with-error-response* #".*status 400.*"
-      #(test-utils/add-test-booking (assoc test-booking :selected_dates ["2018-13-12" "2018-11-13"]))))
+    (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2018-13-12" "2018-11-13"])))
 
   (testing "dates cannot be before the configured date range"
-    (is-thrown-with-error-response* #".*status 400.*"
-      #(test-utils/add-test-booking (assoc test-booking :selected_dates ["2018-06-12" "2018-11-13"]))))
+    (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2018-06-12" "2018-11-13"])))
 
   (testing "dates for inserts cannot be before today"
-    (is-thrown-with-error-response* #".*status 400.*"
-      #(test-utils/add-test-booking (assoc test-booking :selected_dates ["2018-09-12" "2018-11-13"]))))
+    (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2018-09-12" "2018-11-13"])))
 
   (testing "dates cannot be too far into the future"
-    (is-thrown-with-error-response* #".*status 400.*"
-      #(test-utils/add-test-booking (assoc test-booking :selected_dates ["2018-11-12" "2019-01-13"])))))
+    (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2018-11-12" "2019-01-13"]))))
 
 (deftest can-update-booking
   (test-utils/add-test-booking {:name "Tom Anderson"

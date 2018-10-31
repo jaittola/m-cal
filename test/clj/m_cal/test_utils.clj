@@ -1,7 +1,6 @@
 (ns m-cal.test-utils
   (:require [clj-http.client :as client]
-            [clojure.data.json :refer [json-str read-str]]
-            [clojure.string :as str]))
+            [clojure.data.json :refer [json-str read-str]]))
 
 (defn clean-up-db []
   (client/post "http://localhost:3000/test/reset"))
@@ -12,10 +11,14 @@
   (clean-up-db)
   (f))
 
-(defn add-test-booking [booking]
-  (client/post "http://localhost:3000/bookings/api/1/bookings"
-               {:body (json-str booking)
-                :headers {"Content-Type" "application/json"}}))
+(defn add-test-booking
+  ([booking]
+   (add-test-booking booking {}))
+  ([booking http-options]
+    (client/post "http://localhost:3000/bookings/api/1/bookings"
+                 (merge http-options
+                        {:body (json-str booking)
+                         :headers {"Content-Type" "application/json"}}))))
 
 (defn get-all-bookings
   "Underscores, argh"
