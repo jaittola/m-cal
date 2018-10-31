@@ -143,15 +143,6 @@
                                                  booking-date-parser-validator
                                                  booking-date-range-validator]))
 
-
-(defn validate-booking-parameters [name yacht_name email selected_dates]
-  (let [required-days (config/required-days)]
-    (cond
-      (or (nil? name) (nil? yacht_name) (nil? email) (nil? selected_dates)
-          (not (vector? selected_dates))) (error-reply 400 "Mandatory parameters missing.")
-      (not (== required-days (count selected_dates))) (error-reply 400 (str "You must book " required-days " days."))
-      :else nil)))
-
 (defn update-booking-with-validated-params [connection user-id name yacht_name email selected_dates]
   (try
     (db-update-user connection
