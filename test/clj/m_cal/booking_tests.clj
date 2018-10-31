@@ -9,14 +9,14 @@
           expected))
 
 (deftest can-list-all-bookings
-  (test-utils/add-test-booking {:name "Tom Anderson"
-                                :yacht_name "s/y Meriruoho"
-                                :email "tom@example.com"
-                                :selected_dates ["2018-11-12" "2018-11-13"]})
-  (test-utils/add-test-booking {:name "Jack Anderson"
-                                :yacht_name "s/y Abastanza"
-                                :email "jack@example.com"
-                                :selected_dates ["2018-10-22" "2018-10-26"]})
+  (test-utils/add-test-booking-successfully {:name "Tom Anderson"
+                                             :yacht_name "s/y Meriruoho"
+                                             :email "tom@example.com"
+                                             :selected_dates ["2018-11-12" "2018-11-13"]})
+  (test-utils/add-test-booking-successfully {:name "Jack Anderson"
+                                             :yacht_name "s/y Abastanza"
+                                             :email "jack@example.com"
+                                             :selected_dates ["2018-10-22" "2018-10-26"]})
   (let [all-bookings (test-utils/get-all-bookings)
         [b1 b2 b3 b4] all-bookings]
     (is (= 4 (count all-bookings)))
@@ -32,12 +32,12 @@
 
 (defn assert-add-booking-fails-with-400
   [booking]
-  (let [response (test-utils/add-test-booking booking {:throw-exceptions false})]
+  (let [response (test-utils/add-test-booking booking)]
     (is (= 400 (:status response)))))
 
 (defn assert-update-booking-fails-with-400
   [secret-id booking]
-  (let [response (test-utils/update-booking secret-id booking {:throw-exceptions false})]
+  (let [response (test-utils/update-booking secret-id booking)]
     (is (= 400 (:status response)))))
 
 (deftest booking-is-validated
@@ -61,15 +61,15 @@
     (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2018-11-12" "2019-01-13"]))))
 
 (deftest can-update-booking
-  (test-utils/add-test-booking {:name "Tom Anderson"
-                                :yacht_name "s/y Meriruoho"
-                                :email "tom@example.com"
-                                :selected_dates ["2018-11-12" "2018-11-13"]})
-  (test-utils/update-booking (test-utils/get-secret-id "Tom Anderson")
-                             {:name "Tom Anderson"
-                              :yacht_name "s/y Meriruoho"
-                              :email "tom@example.com"
-                              :selected_dates ["2018-11-15" "2018-11-16"]})
+  (test-utils/add-test-booking-successfully {:name "Tom Anderson"
+                                             :yacht_name "s/y Meriruoho"
+                                             :email "tom@example.com"
+                                             :selected_dates ["2018-11-12" "2018-11-13"]})
+  (test-utils/update-booking-successfully (test-utils/get-secret-id "Tom Anderson")
+                                          {:name "Tom Anderson"
+                                           :yacht_name "s/y Meriruoho"
+                                           :email "tom@example.com"
+                                           :selected_dates ["2018-11-15" "2018-11-16"]})
   (let [[b1 b2] (test-utils/get-all-bookings)]
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-15"} b1))
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-16"} b2))))
@@ -79,11 +79,11 @@
                                           :yacht_name "s/y Meriruoho"
                                           :email "tom@example.com"
                                           :selected_dates ["2018-09-15" "2018-11-13"]})
-  (test-utils/update-booking (test-utils/get-secret-id "Tom Anderson")
-                             {:name "Tom Anderson"
-                              :yacht_name "s/y Meriruoho"
-                              :email "tom@example.com"
-                              :selected_dates ["2018-09-15" "2018-11-14"]})
+  (test-utils/update-booking-successfully (test-utils/get-secret-id "Tom Anderson")
+                                          {:name "Tom Anderson"
+                                           :yacht_name "s/y Meriruoho"
+                                           :email "tom@example.com"
+                                           :selected_dates ["2018-09-15" "2018-11-14"]})
   (let [[b1 b2] (test-utils/get-all-bookings)]
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-09-15"} b1))
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-14"} b2))))

@@ -1,5 +1,6 @@
 (ns m-cal.test-utils
   (:require [clj-http.client :as client]
+            [clojure.test :refer [is]]
             [clojure.data.json :refer [json-str read-str]]))
 
 (defn clean-up-db []
@@ -12,13 +13,17 @@
   (f))
 
 (defn add-test-booking
-  ([booking]
-   (add-test-booking booking {}))
-  ([booking http-options]
-    (client/post "http://localhost:3000/bookings/api/1/bookings"
-                 (merge http-options
-                        {:body (json-str booking)
-                         :headers {"Content-Type" "application/json"}}))))
+  [booking]
+  (client/post "http://localhost:3000/bookings/api/1/bookings"
+               {:throw-exceptions false
+                :body (json-str booking)
+                :headers {"Content-Type" "application/json"}}))
+
+(defn add-test-booking-successfully
+  [booking]
+  (let [response (add-test-booking booking)
+        _ (is (= 200 (:status response)))]
+    response))
 
 (defn add-test-booking-unchecked
   [booking]
@@ -43,10 +48,14 @@
       :secret_id))
 
 (defn update-booking
-  ([secret-id booking]
-   (update-booking secret-id booking {}))
-  ([secret-id booking http-options]
-    (client/put (str "http://localhost:3000/bookings/api/1/bookings/" secret-id)
-                (merge http-options
-                       {:body (json-str booking)
-                       :headers {"Content-Type" "application/json"}}))))
+  [secret-id booking]
+  (client/put (str "http://localhost:3000/bookings/api/1/bookings/" secret-id)
+              {:throw-exceptions false
+               :body (json-str booking)
+               :headers {"Content-Type" "application/json"}}))
+
+(defn update-booking-successfully
+  [secret-id booking]
+  (let [response (update-booking secret-id booking)
+        _ (is (= 200 (:status response)))]
+    response))
