@@ -2,7 +2,7 @@
   (:require [m-cal.config :as config]
             [m-cal.util :refer [parse-int]]
             [m-cal.db-common :as db-common]
-            [m-cal.util :refer [parse-date-string]]
+            [m-cal.util :refer [parse-date-string today]]
             [m-cal.validation :as validation]
             [hugsql.core :as hugsql]
             [clojure.java.jdbc :as jdbc]
@@ -104,9 +104,14 @@
            (catch PSQLException pse
              (handle-psql-error pse)))))
 
+(defn date-str-less-or-eq
+  "return true iff date-1 is less or equal than date-2. Both are given as date strings (e.g. '2018-03-22')"
+  [date-1 date-2]
+  (<= (.compareTo date-1 date-2) 0))
+
 (defn assert-is-in-range [date first-date last-date]
-  (if (not (and (<= (.compareTo first-date date) 0)
-                (<= (.compareTo date last-date) 0)))
+  (if (not (and (date-str-less-or-eq first-date date)
+                (date-str-less-or-eq date last-date)))
     (throw (ex-info (str "date out of range: " date) {}))))
 
 (defn assert-is-in-calendar-range [date]
@@ -143,6 +148,12 @@
                                                  booking-date-parser-validator
                                                  booking-date-range-validator]))
 
+(defn assert-bookings-not-in-the-past
+  [bookings]
+  (doseq [booked-date bookings]
+    (if (date-str-less-or-eq booked-date (today))
+      (throw (IllegalArgumentException. "date in the past")))))
+
 (defn update-booking-with-validated-params [connection user-id name yacht_name email selected_dates]
   (try
     (db-update-user connection
@@ -156,6 +167,7 @@
           bookings-to-delete (filter (fn [booking] (not (some #(= (:booked_date booking) %) selected_dates))) db-selected-dates)
           bookings-to-add (filter (fn [booking] (not (some #(= booking %) db-selected-dates-values)))
                                   selected_dates)
+          _ (assert-bookings-not-in-the-past bookings-to-add)
           _ (database-delete-bookings connection bookings-to-delete)
 
           inserted-bookings-ids (database-insert-bookings connection
@@ -180,13 +192,16 @@
                              email
                              selected_dates))
     (catch PSQLException pse
-      (handle-psql-error pse (:id user-id)))))
+      (handle-psql-error pse (:id user-id)))
+    (catch IllegalArgumentException e
+      (error-reply 400 "trying to modify bookings in the past"))))
 
 (defn insert-booking [params]
   (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
     (if validation-error
       (error-reply 400 validation-error)
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
+             (assert-bookings-not-in-the-past selected_dates)
              (let [user-id (database-insert-user connection
                                                  name
                                                  yacht_name
@@ -208,7 +223,9 @@
                                       email
                                       selected_dates)))
            (catch PSQLException pse
-             (handle-psql-error pse))))))
+             (handle-psql-error pse))
+           (catch IllegalArgumentException e
+             (error-reply 400 "Trying to make booking in the past"))))))
 
 (defn update-booking [secret_id params]
   (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (booking-validator params)]

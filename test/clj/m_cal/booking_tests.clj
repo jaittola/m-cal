@@ -35,6 +35,11 @@
   (let [response (test-utils/add-test-booking booking {:throw-exceptions false})]
     (is (= 400 (:status response)))))
 
+(defn assert-update-booking-fails-with-400
+  [secret-id booking]
+  (let [response (test-utils/update-booking secret-id booking {:throw-exceptions false})]
+    (is (= 400 (:status response)))))
+
 (deftest booking-is-validated
   (testing "all fields are required"
     (doseq [missing-key [:name :yacht_name :email :selected_dates]]
@@ -49,8 +54,8 @@
   (testing "dates cannot be before the configured date range"
     (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2018-06-12" "2018-11-13"])))
 
-;  (testing "dates for inserts cannot be before today"
-;    (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2018-09-12" "2018-11-13"])))
+  (testing "dates for inserts cannot be before today"
+    (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2018-09-12" "2018-11-13"])))
 
   (testing "dates cannot be too far into the future"
     (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2018-11-12" "2019-01-13"]))))
@@ -69,16 +74,27 @@
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-15"} b1))
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-16"} b2))))
 
-(deftest booking-update-can-contain-dates-in-the-past-gaping-whole-here-for-hackers
-  (test-utils/add-test-booking {:name "Tom Anderson"
-                                :yacht_name "s/y Meriruoho"
-                                :email "tom@example.com"
-                                :selected_dates ["2018-11-12" "2018-11-13"]})
+(deftest booking-update-can-contain-unmodified-dates-in-the-past
+  (test-utils/add-test-booking-unchecked {:name "Tom Anderson"
+                                          :yacht_name "s/y Meriruoho"
+                                          :email "tom@example.com"
+                                          :selected_dates ["2018-09-15" "2018-11-13"]})
   (test-utils/update-booking (test-utils/get-secret-id "Tom Anderson")
                              {:name "Tom Anderson"
                               :yacht_name "s/y Meriruoho"
                               :email "tom@example.com"
-                              :selected_dates ["2018-09-15" "2018-09-16"]})
+                              :selected_dates ["2018-09-15" "2018-11-14"]})
   (let [[b1 b2] (test-utils/get-all-bookings)]
     (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-09-15"} b1))
-    (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-09-16"} b2))))
+    (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2018-11-14"} b2))))
+
+(deftest user-cannot-modify-future-dates-to-past-in-update
+  (test-utils/add-test-booking-unchecked {:name "Tom Anderson"
+                                          :yacht_name "s/y Meriruoho"
+                                          :email "tom@example.com"
+                                          :selected_dates ["2018-09-15" "2018-11-13"]})
+  (assert-update-booking-fails-with-400 (test-utils/get-secret-id "Tom Anderson")
+                                        {:name "Tom Anderson"
+                                         :yacht_name "s/y Meriruoho"
+                                         :email "tom@example.com"
+                                         :selected_dates ["2018-09-15" "2018-09-14"]}))

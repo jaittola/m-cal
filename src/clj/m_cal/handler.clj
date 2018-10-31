@@ -60,6 +60,7 @@
   (POST "/reset" [] (do (testing/reset-db)
                       {:status 200 :body "ok"}))
   (GET "/user/:name" [name] {:status 200 :body {:user (testing/get-user name)}})
+  (POST "/testBookings" [:as {body :body}] (testing/insert-booking-unchecked body))
   (route/not-found "Not Found"))
 
 (defn in-test-env [handler]
@@ -69,21 +70,18 @@
       (handler req))))
 
 (def app
-  (let [auth-params (get-auth-params)]
-    (routes
-     (-> (context "/bookings" []
-                  (wrap-basicauth-if-auth-params booking-routes (get-auth-params)))
-         (middleware/wrap-json-body {:keywords? true})
-         (middleware/wrap-json-response))
-     (-> (context "/test" []
-                  (in-test-env test-routes))
-         (middleware/wrap-json-body {:keywords? true})
-         (middleware/wrap-json-response))
-     (-> other-routes
-         (middleware/wrap-json-body)
-         (middleware/wrap-json-response))
-     )))
-
+  (routes
+    (-> (context "/bookings" []
+          (-> booking-routes
+              (wrap-basicauth-if-auth-params (get-auth-params))
+              (middleware/wrap-json-body {:keywords? true})
+              (middleware/wrap-json-response))))
+    (-> (context "/test" []
+          (-> (in-test-env test-routes)
+              (middleware/wrap-json-body {:keywords? true})
+              (middleware/wrap-json-response))))
+    (-> other-routes
+        (middleware/wrap-json-response))))
 
 (defn setup
   []
