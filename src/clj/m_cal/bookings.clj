@@ -2,7 +2,7 @@
   (:require [m-cal.config :as config]
             [m-cal.util :refer [parse-int]]
             [m-cal.db-common :as db-common]
-            [m-cal.util :refer [parse-date-string today]]
+            [m-cal.util :refer [parse-date-string]]
             [m-cal.validation :as validation]
             [hugsql.core :as hugsql]
             [clojure.java.jdbc :as jdbc]
@@ -109,11 +109,7 @@
                 (<= (.compareTo date last-date) 0)))
     (throw (ex-info (str "date out of range: " date) {}))))
 
-(defn assert-is-in-allowed-range-for-insert [date]
-  (let [{:keys [last_date]} (config/calendar-config)]
-    (assert-is-in-range date (today) last_date)))
-
-(defn assert-is-in-allowed-range [date]
+(defn assert-is-in-calendar-range [date]
   (let [{:keys [first_date last_date]} (config/calendar-config)]
     (assert-is-in-range date first_date last_date)))
 
@@ -137,19 +133,13 @@
 (def booking-date-parser-validator (validation/assert-validator
                                      (fn [params]
                                        (doall (map parse-date-string (:selected_dates params))))))
-(def booking-date-future-range-validator (validation/assert-validator
-                                           (fn [{:keys [selected_dates]}]
-                                             (doall (map assert-is-in-allowed-range-for-insert selected_dates)))))
 (def booking-date-range-validator (validation/assert-validator
                                     (fn [{:keys [selected_dates]}]
-                                      (doall (map assert-is-in-allowed-range selected_dates)))))
+                                      (doall (map assert-is-in-calendar-range selected_dates)))))
 
-;; when inserting booking we validate that dates are in proper range.
-(def insert-booking-validator (validation/chain [booking-spec-validator
-                                                 booking-date-parser-validator
-                                                 booking-date-future-range-validator]))
-;; when updating bookings one of the dates can be in history, too
-(def update-booking-validator (validation/chain [booking-spec-validator
+;; when inserting or updating bookings we do basic validations for inputs.
+;; Note that checking if dates are in future or not are not done here yet.
+(def booking-validator (validation/chain [booking-spec-validator
                                                  booking-date-parser-validator
                                                  booking-date-range-validator]))
 
@@ -202,7 +192,7 @@
       (handle-psql-error pse (:id user-id)))))
 
 (defn insert-booking [params]
-  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (insert-booking-validator params)]
+  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
     (if validation-error
       (error-reply 400 validation-error)
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
@@ -230,7 +220,7 @@
              (handle-psql-error pse))))))
 
 (defn update-booking [secret_id params]
-  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (update-booking-validator params)]
+  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
     (cond
       validation-error (error-reply 400 validation-error)
       (nil? secret_id) (error-reply 400 "Mandatory parameters missing.")
