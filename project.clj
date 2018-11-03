@@ -1,6 +1,7 @@
 (defproject m-cal "0.1.0-SNAPSHOT"
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.339"]
+                 [org.clojure/spec.alpha "0.2.176"]
                  [reagent "0.8.1"]
                  [com.andrewmcveigh/cljs-time "0.5.2"]
                  [cljs-http "0.1.45"]
@@ -18,16 +19,18 @@
                  [com.cemerick/url "0.1.1"]
                  [cljsjs/babel-polyfill "6.20.0-2"]
                  [clj-http "3.9.1"]
+                 [clj-time "0.15.0"]
                  [org.clojure/data.json "0.2.6"]
                  [alxlit/autoclave "0.2.0" :exclusions [com.google.guava/guava]]]
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-less "1.7.5"]
-            [lein-ring "0.12.1"]]
+            [lein-ring "0.12.4"]]
 
   :min-lein-version "2.5.3"
   :uberjar-name "m-cal-standalone.jar"
   :ring {:init m-cal.handler/setup
-         :handler m-cal.handler/app}
+         :handler m-cal.handler/app
+         :reload-paths ["src/clj"]}
   :source-paths ["src/clj"]
   :resource-paths [ "resources" "src/db/queries" ]
   :main m-cal.handler
@@ -50,6 +53,10 @@
 
               :plugins      [[lein-figwheel "0.5.16"]]
               }
+
+             :test
+             {:test-paths ["test/clj"]}
+
              :uberjar {
                        :prep-tasks [["cljsbuild" "once" "min"] ["less" "once"] "compile"]
                        :omit-source true

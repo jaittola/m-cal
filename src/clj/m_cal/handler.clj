@@ -1,7 +1,6 @@
 (ns m-cal.handler
   (:require [compojure.core :refer :all]
             [compojure.route :as route]
-            [compojure.handler :as handler]
             [ring.middleware.json :as middleware]
             [ring.util.response :as resp]
             [ring.adapter.jetty :as jetty]
@@ -9,7 +8,8 @@
             [environ.core :refer [env]]
             [m-cal.bookings :as bookings]
             [m-cal.config :as config]
-            [m-cal.email-confirmation-sender :as email-sender])
+            [m-cal.email-confirmation-sender :as email-sender]
+            [m-cal.testing :as testing])
   (:gen-class))
 
 (defn get-auth-params []
@@ -56,18 +56,32 @@
   (route/not-found "Not Found")
  )
 
-(def app
-  (let [auth-params (get-auth-params)]
-    (routes
-     (-> (context "/bookings" []
-                  (wrap-basicauth-if-auth-params booking-routes (get-auth-params)))
-         (middleware/wrap-json-body {:keywords? true})
-         (middleware/wrap-json-response))
-     (-> other-routes
-         (middleware/wrap-json-body)
-         (middleware/wrap-json-response))
-     )))
+(defroutes test-routes
+  (POST "/reset" [] (do (testing/reset-db)
+                      {:status 200 :body "ok"}))
+  (GET "/user/:name" [name] {:status 200 :body {:user (testing/get-user name)}})
+  (POST "/testBookings" [:as {body :body}] (testing/insert-booking-unchecked body))
+  (route/not-found "Not Found"))
 
+(defn in-test-env [handler]
+  (fn [req]
+    (if (not (env :testing))
+      {:status 404}
+      (handler req))))
+
+(def app
+  (routes
+    (-> (context "/bookings" []
+          (-> booking-routes
+              (wrap-basicauth-if-auth-params (get-auth-params))
+              (middleware/wrap-json-body {:keywords? true})
+              (middleware/wrap-json-response))))
+    (-> (context "/test" []
+          (-> (in-test-env test-routes)
+              (middleware/wrap-json-body {:keywords? true})
+              (middleware/wrap-json-response))))
+    (-> other-routes
+        (middleware/wrap-json-response))))
 
 (defn setup
   []

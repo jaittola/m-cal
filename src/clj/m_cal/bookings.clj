@@ -1,10 +1,12 @@
 (ns m-cal.bookings
   (:require [m-cal.config :as config]
             [m-cal.util :refer [parse-int]]
-            [m-cal.email-confirmation :as email-confirmation]
             [m-cal.db-common :as db-common]
+            [m-cal.util :refer [parse-date-string today]]
+            [m-cal.validation :as validation]
             [hugsql.core :as hugsql]
-            [clojure.java.jdbc :as jdbc])
+            [clojure.java.jdbc :as jdbc]
+            [clojure.spec.alpha :as s])
   (:import [org.postgresql.util PSQLException]
            [java.util UUID]))
 
@@ -102,13 +104,55 @@
            (catch PSQLException pse
              (handle-psql-error pse)))))
 
-(defn validate-booking-parameters [name yacht_name email selected_dates]
-  (let [required-days (config/required-days)]
-    (cond
-      (or (nil? name) (nil? yacht_name) (nil? email) (nil? selected_dates)
-          (not (vector? selected_dates))) (error-reply 400 "Mandatory parameters missing.")
-      (not (== required-days (count selected_dates))) (error-reply 400 (str "You must book " required-days " days."))
-      :else nil)))
+(defn date-str-less-or-eq
+  "return true iff date-1 is less or equal than date-2. Both are given as date strings (e.g. '2018-03-22')"
+  [date-1 date-2]
+  (<= (.compareTo date-1 date-2) 0))
+
+(defn assert-is-in-range [date first-date last-date]
+  (if (not (and (date-str-less-or-eq first-date date)
+                (date-str-less-or-eq date last-date)))
+    (throw (ex-info (str "date out of range: " date) {}))))
+
+(defn assert-is-in-calendar-range [date]
+  (let [{:keys [first_date last_date]} (config/calendar-config)]
+    (assert-is-in-range date first_date last_date)))
+
+(defn string-of-at-least [n] (s/and string?
+                                    #(>= (.length %) n)))
+;; TODO: share this with frontend code
+(def email-validation-regex #"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])")
+
+(def local-date-string-regex #"[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]") ; just a format check
+
+(s/def ::name (string-of-at-least 5))
+(s/def ::yacht_name (string-of-at-least 5))
+(s/def ::email (s/and (string-of-at-least 5)
+                      #(re-matches email-validation-regex %)))
+(s/def ::local-date (s/and string?
+                           #(re-matches local-date-string-regex %)))
+(s/def ::selected_dates (s/tuple ::local-date ::local-date))
+(s/def ::booking (s/keys :req-un [::name ::yacht_name ::email ::selected_dates]))
+
+(def booking-spec-validator (validation/spec-validator ::booking))
+(def booking-date-parser-validator (validation/assert-validator
+                                     (fn [params]
+                                       (doall (map parse-date-string (:selected_dates params))))))
+(def booking-date-range-validator (validation/assert-validator
+                                    (fn [{:keys [selected_dates]}]
+                                      (doall (map assert-is-in-calendar-range selected_dates)))))
+
+;; when inserting or updating bookings we do basic validations for inputs.
+;; Note that checking if dates are in future or not are not done here yet.
+(def booking-validator (validation/chain [booking-spec-validator
+                                                 booking-date-parser-validator
+                                                 booking-date-range-validator]))
+
+(defn assert-bookings-not-in-the-past
+  [bookings]
+  (doseq [booked-date bookings]
+    (if (date-str-less-or-eq booked-date (today))
+      (throw (IllegalArgumentException. "date in the past")))))
 
 (defn update-booking-with-validated-params [connection user-id name yacht_name email selected_dates]
   (try
@@ -123,6 +167,7 @@
           bookings-to-delete (filter (fn [booking] (not (some #(= (:booked_date booking) %) selected_dates))) db-selected-dates)
           bookings-to-add (filter (fn [booking] (not (some #(= booking %) db-selected-dates-values)))
                                   selected_dates)
+          _ (assert-bookings-not-in-the-past bookings-to-add)
           _ (database-delete-bookings connection bookings-to-delete)
 
           inserted-bookings-ids (database-insert-bookings connection
@@ -147,16 +192,16 @@
                              email
                              selected_dates))
     (catch PSQLException pse
-      (handle-psql-error pse (:id user-id)))))
+      (handle-psql-error pse (:id user-id)))
+    (catch IllegalArgumentException e
+      (error-reply 400 "trying to modify bookings in the past"))))
 
-(defn insert-booking [{:keys [name yacht_name email selected_dates]}]
-  (let [validation-err (validate-booking-parameters name
-                                                    yacht_name
-                                                    email
-                                                    selected_dates)]
-    (if validation-err
-      validation-err
+(defn insert-booking [params]
+  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
+    (if validation-error
+      (error-reply 400 validation-error)
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
+             (assert-bookings-not-in-the-past selected_dates)
              (let [user-id (database-insert-user connection
                                                  name
                                                  yacht_name
@@ -178,15 +223,14 @@
                                       email
                                       selected_dates)))
            (catch PSQLException pse
-             (handle-psql-error pse))))))
+             (handle-psql-error pse))
+           (catch IllegalArgumentException e
+             (error-reply 400 "Trying to make booking in the past"))))))
 
-(defn update-booking [secret_id {:keys [name yacht_name email selected_dates]}]
-  (let [validation-err (validate-booking-parameters name
-                                                    yacht_name
-                                                    email
-                                                    selected_dates)]
+(defn update-booking [secret_id params]
+  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
     (cond
-      validation-err validation-err
+      validation-error (error-reply 400 validation-error)
       (nil? secret_id) (error-reply 400 "Mandatory parameters missing.")
       :else (try (jdbc/with-db-transaction [connection @db-common/dbspec]
                    (let [user (first (db-find-user-by-secret-id connection

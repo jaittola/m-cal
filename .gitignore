@@ -20,3 +20,5 @@ resources/public/js/bundle.*js
 out
 resources/public/css/site.css
 /local-database
+/.idea
+/m-cal.iml
