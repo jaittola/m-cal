@@ -283,6 +283,9 @@
 (defn booking-details [booking]
   [:div (:name booking) [:br] (:yacht_name booking)])
 
+(defn my-details-for-booking [ratom]
+  [:div (:name @ratom) [:br] (:yacht_name @ratom)])
+
 (defn day-details-chosen-cancellable [isoday]
   [:input.booking_checkbox
    {:type "image"
@@ -297,6 +300,11 @@
   [:div.booking_checkbox_appear_disabled
    {:disabled true}])
 
+(defn calendar-cell-booked-for-me [isoday ratom]
+  [:div.calendar-booked-content-cell
+   [day-details-chosen-cancellable isoday]
+   [my-details-for-booking ratom]])
+
 (defn booking-or-free [today daydata ratom] ""
   (let [booking (:booking daydata)
         isoday (:isoformat (:day daydata))
@@ -305,10 +313,7 @@
         is-booked-for-me (some #(== % isoday) (:selected_dates @ratom))
         has-required-bookings (>= (count (:selected_dates @ratom)) (:required_days @ratom))]
     (cond
-      (and is-booked-for-me is-in-future)
-      [:div.calendar-booked-content-cell
-       [day-details-chosen-cancellable isoday]
-       [booking-details booking]]
+      (and is-booked-for-me is-in-future) [calendar-cell-booked-for-me isoday ratom]
       (and is-booked-for-me (not is-in-future)) [booking-details booking]
       (and booking (not (= (:user_id booking) (:user_public_id @ratom)))) [booking-details booking]
       (and (nil? booking) (not is-in-future)) blank-element
