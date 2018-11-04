@@ -84,6 +84,10 @@ button {
     -ms-flex: 0 1 auto;
 }
 
+.blank-element {
+    min-width: 2em;
+}
+
 .error_status_area {
     margin-top: @area_padding;
     padding: @area_padding;
@@ -110,10 +114,17 @@ button {
 }
 
 .selected_days_selections {
-    flex: 2 0 auto;
-    -ms-flex: 2 0 auto;
+    display: flex;
+    display: -ms-flexbox;
     flex-flow: column nowrap;
     -ms-flex-flow: column nowrap;
+    flex: 2 0 auto;
+    -ms-flex: 2 0 auto;
+}
+
+.selected_day {
+    flex: 2 0 auto;
+    -ms-flex: 2 0 auto;
 }
 
 .contact_input {

@@ -235,7 +235,7 @@
    ])
 
 (defn blank-element []
-  [:div {:dangerouslySetInnerHTML {:__html "&nbsp;"}}])
+  [:div.blank-element {:dangerouslySetInnerHTML {:__html "&nbsp;"}}])
 
 (defn selection_area [ratom]
   (let [days (vec (sort (:selected_dates @ratom)))]
@@ -246,7 +246,7 @@
            (map (fn [dayidx]
                   (let [day (get days dayidx)]
                     ^{:key (str "day-" dayidx)}
-                    [:div.selected_days_selections
+                    [:div.selected_day
                      (if day (u/format-date day)
                          [blank-element])]))))]]))
 
