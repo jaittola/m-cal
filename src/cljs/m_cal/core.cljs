@@ -247,7 +247,7 @@
                   (let [day (get days dayidx)]
                     ^{:key (str "day-" dayidx)}
                     [:div.selected_days_selections
-                     (if (some? day) (u/format-date day)
+                     (if day (u/format-date day)
                          [blank-element])]))))]]))
 
 (defn selection_button_area [ratom]
@@ -267,7 +267,7 @@
 
 (defn status-area [status-property class ratom]
    (let [status (status-property @ratom)]
-     (if (some? status)
+     (if status
        [:div {:class class} status]
        [:div])))
 
@@ -318,7 +318,7 @@
         classes (string/join " " (filter some?
                                          ["calendar-day"
                                           (when (== 7 (:weekday day)) "calendar-sunday")
-                                          (if (some? booking) "calendar-taken" "calendar-free")]))]
+                                          (if booking "calendar-taken" "calendar-free")]))]
     [:tr
      [:td {:class (str "calendar-date-cell " classes)}
       (:formatted-date day)]
