@@ -1,6 +1,6 @@
 
 @h2_font_size: 1.5rem;
-@font_size: 1.1rem;
+@font_size: 1rem;
 @heading_font_family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 @body_font_family: 'Times New Roman', Times, serif;
 
@@ -159,11 +159,25 @@ button {
     padding-right: 10px;
 }
 
-.calendar-date-cell, .calendar-booking-cell {
+.calendar-date-cell {
     padding-left: @calendar_cell_padding;
     padding-right: @calendar_cell_padding;
     height: 2.5em;
-    min-width: 5em;
+    min-width: 3em;
+    padding-top: @calendar_cell_padding;
+    padding-bottom: @calendar_cell_padding;
+
+    button {
+        padding-top: @calendar_cell_button_padding;
+        padding-bottom: @calendar_cell_button_padding;
+    }
+}
+
+.calendar-booking-cell {
+    padding-left: @calendar_cell_padding;
+    padding-right: @calendar_cell_padding;
+    height: 2.5em;
+    min-width: 250px;
     padding-top: @calendar_cell_padding;
     padding-bottom: @calendar_cell_padding;
 
