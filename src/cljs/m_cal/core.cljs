@@ -283,23 +283,30 @@
 (defn booking-details [booking]
   [:div (:name booking) [:br] (:yacht_name booking)])
 
+(defn day-details-chosen-cancellable [isoday]
+  [:button
+   {:on-click #(remove-date-selection isoday)}
+   "Poista valinta"])
+
+(defn day-details-bookable [isoday has-required-bookings]
+  [:button
+   {:on-click #(add-date-selection isoday)
+    :disabled has-required-bookings}
+   "Valitse tämä päivä"])
+
 (defn booking-or-free [today daydata ratom] ""
   (let [booking (:booking daydata)
         isoday (:isoformat (:day daydata))
         theday (:date (:day daydata))
         is-in-future (time/after? theday today)
-        is-booked-for-me (some #(== % isoday) (:selected_dates @ratom))]
+        is-booked-for-me (some #(== % isoday) (:selected_dates @ratom))
+        has-required-bookings (>= (count (:selected_dates @ratom)) (:required_days @ratom))]
     (cond
-      (and is-booked-for-me is-in-future) [:button
-                                          {:on-click #(remove-date-selection isoday)}
-                                           "Poista valinta"]
+      (and is-booked-for-me is-in-future) [day-details-chosen-cancellable isoday]
       (and is-booked-for-me (not is-in-future)) [booking-details booking]
       (and booking (not (= (:user_id booking) (:user_public_id @ratom)))) [booking-details booking]
       (and (nil? booking) (not is-in-future)) blank-element
-      :else [:button
-             {:on-click #(add-date-selection isoday)
-              :disabled (>= (count (:selected_dates @ratom)) (:required_days @ratom))}
-             "Valitse tämä päivä"])))
+      :else [day-details-bookable isoday has-required-bookings])))
 
 (defn make-monthly-calendar-seq [first-date last-date]
   (let [calendar-by-month (->> (u/make-calendar-seq first-date last-date)
