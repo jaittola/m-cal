@@ -313,11 +313,17 @@
 (def make-calendar-seq-memo (memoize make-monthly-calendar-seq))
 
 (defn render-day [daydata today ratom]
-  [:tr
-   [:td {:class (str "calendar-date-cell " (:classes daydata))}
-    (:formatted-date (:day daydata))]
-   [:td {:class (str "calendar-booking-cell " (:classes daydata))}
-    [booking-or-free today daydata ratom]]])
+  (let [day (:day daydata)
+        booking (:booking daydata)
+        classes (string/join " " (filter some?
+                                         ["calendar-day"
+                                          (when (== 7 (:weekday day)) "calendar-sunday")
+                                          (if (some? booking) "calendar-taken" "calendar-free")]))]
+    [:tr
+     [:td {:class (str "calendar-date-cell " classes)}
+      (:formatted-date day)]
+     [:td {:class (str "calendar-booking-cell " classes)}
+      [booking-or-free today daydata ratom]]]))
 
 (defn render-month [{:keys [monthname days]} booked-dates today ratom]
   [:div.calendar-month
@@ -326,14 +332,9 @@
     [:tbody
      (->> days
           (map (fn [day]
-                 (let [booking (find-booking-for booked-dates day)]
-                   {:day day
-                    :booking booking
-                    :key (str "day-" (:dateidx day))
-                    :classes (string/join " " (filter some?
-                                                      ["calendar-day"
-                                                       (when (== 7 (:weekday day)) "calendar-sunday")
-                                                       (if (some? booking) "calendar-taken" "calendar-free")]))})))
+                 {:day day
+                  :booking (find-booking-for booked-dates day)
+                  :key (str "day-" (:dateidx day))}))
           (map (fn [daydata]
                  ^{:key (:key daydata)} [render-day daydata today ratom]))
           (doall))]]])
