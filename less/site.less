@@ -13,8 +13,9 @@
 
 @success_color: #60d360;
 @error_color: #ffcccc;
-@free_calendar_color: #f0f0f0;
-@taken_calendar_color: #e0e0e0;
+@calendar_day_color: #f0f0f0;
+@calendar_day_past_color: #e0e0e0;
+@calendar_day_past_text_color: #474747;
 @sunday_border_bottom_color: black;
 @day_border_bottom_color: #cfcfcf;
 @heading_color: #1a0dab;
@@ -217,18 +218,16 @@ button {
 
 .calendar-day {
     border-bottom: 1px solid @day_border_bottom_color;
+    background-color: @calendar_day_color;
+}
+
+.calendar-day-past {
+    background-color: @calendar_day_past_color;
+    color: @calendar_day_past_text_color;
 }
 
 .calendar-sunday {
     border-bottom: 1px solid black;
-}
-
-.calendar-free {
-    background-color: @free_calendar_color;
-}
-
-.calendar-taken {
-    background-color: @taken_calendar_color;
 }
 
 .selection {

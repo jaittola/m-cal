@@ -353,11 +353,13 @@
 
 (defn render-day [daydata today ratom]
   (let [day (:day daydata)
+        thedate (:date (:day daydata))
+        is-in-past (time/before? thedate today)
         booking (:booking daydata)
         classes (string/join " " (filter some?
                                          ["calendar-day"
                                           (when (== 7 (:weekday day)) "calendar-sunday")
-                                          (if booking "calendar-taken" "calendar-free")]))]
+                                          (when is-in-past "calendar-day-past")]))]
     [:tr
      [:td {:class (str "calendar-date-cell " classes)}
       (:formatted-date day)]
