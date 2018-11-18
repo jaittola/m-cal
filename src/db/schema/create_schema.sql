@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
        secret_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
        username VARCHAR,
        yachtname VARCHAR,
-       email VARCHAR
+       email VARCHAR,
+       phone VARCHAR
 );
 
 CREATE TABLE IF NOT EXISTS booking (

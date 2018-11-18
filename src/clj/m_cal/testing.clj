@@ -18,11 +18,12 @@
                                  first)))
 
 (defn insert-booking-unchecked [params]
-  (let [{:keys [name yacht_name email selected_dates]} params]
+  (let [{:keys [name yacht_name email phone selected_dates]} params]
     (jdbc/with-db-transaction [connection @db-common/dbspec]
       (let [user-id (bookings/database-insert-user connection
                                           name
                                           yacht_name
+                                          phone
                                           email)]
         (bookings/database-insert-bookings connection
                                   selected_dates

@@ -13,8 +13,8 @@ ORDER BY booked_date;
 
 -- :name db-insert-user :<!
 -- :doc Insert a user into the database
-INSERT INTO users (username, yachtname, email)
-VALUES (:name, :yacht_name, :email)
+INSERT INTO users (username, yachtname, phone, email)
+VALUES (:name, :yacht_name, :phone, :email)
 RETURNING id, secret_id;
 
 -- :name db-insert-booking :<!
@@ -35,6 +35,7 @@ UPDATE users
 SET
 username = :name,
 yachtname = :yacht_name,
+phone = :phone,
 email = :email
 WHERE id = :id;
 
@@ -62,7 +63,8 @@ id,
 secret_id,
 username AS name,
 yachtname AS yacht_name,
-email
+email,
+phone
 FROM users u
 WHERE secret_id = :user_secret_id;
 

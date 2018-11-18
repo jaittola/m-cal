@@ -12,10 +12,11 @@
 
 (hugsql/def-db-fns "app_queries/queries.sql")
 
-(defn database-insert-user [connection name yacht_name email]
+(defn database-insert-user [connection name yacht_name phone email]
   (first (db-insert-user connection
                          {:name name
                           :yacht_name yacht_name
+                          :phone phone
                           :email email})))
 
 (defn database-insert-bookings [connection selected_dates user-id]
@@ -41,12 +42,13 @@
           :booked_date date})
        booking-id-containers selected_dates))
 
-(defn success-booking-reply [connection user-id name yacht_name email selected_dates]
+(defn success-booking-reply [connection user-id name yacht_name email phone selected_dates]
   {:status 200
    :body {:user {:id (:id user-id)
                  :secret_id (:secret_id user-id)
                  :name name
                  :yacht_name yacht_name
+                 :phone phone
                  :email email}
           :selected_dates selected_dates
           :all_bookings (db-list-all-bookings connection)
@@ -100,6 +102,7 @@
                                           (:name user)
                                           (:yacht_name user)
                                           (:email user)
+                                          (:phone user)
                                           selected-dates))))
            (catch PSQLException pse
              (handle-psql-error pse)))))
@@ -124,15 +127,18 @@
 (def email-validation-regex #"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])")
 
 (def local-date-string-regex #"[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]") ; just a format check
+(def phone-number-string-regex #"^((\+([0-9] *){1,3})|0)([0-9)(] *){6,20}$")
 
 (s/def ::name (string-of-at-least 5))
 (s/def ::yacht_name (string-of-at-least 5))
 (s/def ::email (s/and (string-of-at-least 5)
                       #(re-matches email-validation-regex %)))
+(s/def ::phone (s/and string?
+                      #(re-matches phone-number-string-regex %)))
 (s/def ::local-date (s/and string?
                            #(re-matches local-date-string-regex %)))
 (s/def ::selected_dates (s/tuple ::local-date ::local-date))
-(s/def ::booking (s/keys :req-un [::name ::yacht_name ::email ::selected_dates]))
+(s/def ::booking (s/keys :req-un [::name ::yacht_name ::email ::phone ::selected_dates]))
 
 (def booking-spec-validator (validation/spec-validator ::booking))
 (def booking-date-parser-validator (validation/assert-validator
@@ -145,8 +151,8 @@
 ;; when inserting or updating bookings we do basic validations for inputs.
 ;; Note that checking if dates are in future or not are not done here yet.
 (def booking-validator (validation/chain [booking-spec-validator
-                                                 booking-date-parser-validator
-                                                 booking-date-range-validator]))
+                                          booking-date-parser-validator
+                                          booking-date-range-validator]))
 
 (defn assert-bookings-not-in-the-past
   [bookings]
@@ -154,12 +160,13 @@
     (if (date-str-less-or-eq booked-date (today))
       (throw (IllegalArgumentException. "date in the past")))))
 
-(defn update-booking-with-validated-params [connection user-id name yacht_name email selected_dates]
+(defn update-booking-with-validated-params [connection user-id name yacht_name email phone selected_dates]
   (try
     (db-update-user connection
                     {:name name
                      :yacht_name yacht_name
                      :email email
+                     :phone phone
                      :id (:id user-id)})
     (let [db-selected-dates (db-select-user-bookings-for-update connection
                                                               {:user_id (:id user-id)})
@@ -190,6 +197,7 @@
                              name
                              yacht_name
                              email
+                             phone
                              selected_dates))
     (catch PSQLException pse
       (handle-psql-error pse (:id user-id)))
@@ -197,7 +205,7 @@
       (error-reply 400 "trying to modify bookings in the past"))))
 
 (defn insert-booking [params]
-  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
+  (let [{:keys [name yacht_name email phone selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
     (if validation-error
       (error-reply 400 validation-error)
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
@@ -205,6 +213,7 @@
              (let [user-id (database-insert-user connection
                                                  name
                                                  yacht_name
+                                                 phone
                                                  email)
                    bookings-ids (database-insert-bookings connection
                                                           selected_dates
@@ -221,6 +230,7 @@
                                       name
                                       yacht_name
                                       email
+                                      phone
                                       selected_dates)))
            (catch PSQLException pse
              (handle-psql-error pse))
@@ -228,7 +238,7 @@
              (error-reply 400 "Trying to make booking in the past"))))))
 
 (defn update-booking [secret_id params]
-  (let [{:keys [name yacht_name email selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
+  (let [{:keys [name yacht_name email phone selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
     (cond
       validation-error (error-reply 400 validation-error)
       (nil? secret_id) (error-reply 400 "Mandatory parameters missing.")
@@ -241,6 +251,7 @@
                                                                name
                                                                yacht_name
                                                                email
+                                                               phone
                                                                selected_dates))))
                  (catch PSQLException pse
                    (handle-psql-error pse))))))

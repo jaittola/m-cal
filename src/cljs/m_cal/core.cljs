@@ -14,12 +14,14 @@
 
 (def min-input-len 5)
 (def email-validation-regex #"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])")
+(def phone-number-validation-regex #"^((\+([0-9] *){1,3})|0)([0-9] *){6,15}$")
 
 (defonce app-state
   (reagent/atom {:required_days 2
                  :selected_dates []
                  :name ""
                  :email ""
+                 :phone ""
                  :yacht_name ""
                  :user_private_id nil
                  :user_public_id nil
@@ -68,6 +70,7 @@
          :selected_dates []
          :name ""
          :email ""
+         :phone ""
          :yacht_name ""
          :user_private_id nil
          :user_public_id nil))
@@ -77,6 +80,7 @@
          :selected_dates []
          :name (:name user)
          :email (:email user)
+         :phone (:phone user)
          :yacht_name (:yacht_name user)
          :user_private_id (:secret_id user)
          :user_public_id (:id user)
@@ -111,20 +115,27 @@
       (< string-len min-input-len) :bad
       :else :good)))
 
-(defn email-input-validation [value]
+(defn re-input-validation [field-validation-regex value]
   (let [string-len (count value)]
     (cond
       (== string-len 0) :empty
       (< string-len min-input-len) :bad
-      :else (if (re-matches email-validation-regex value)
+      :else (if (re-matches field-validation-regex value)
               :good
               :bad))))
+
+(defn email-input-validation [value]
+  (re-input-validation email-validation-regex value))
+
+(defn phone-input-validation [value]
+  (re-input-validation phone-number-validation-regex value))
 
 (defn all-input-validates [ratom]
   (and (every? #(= :good %)
                [(simple-input-validation (:name @ratom))
                 (simple-input-validation (:yacht_name @ratom))
-                (email-input-validation (:email @ratom))])
+                (email-input-validation (:email @ratom))
+                (phone-input-validation (:phone @ratom))])
        (>= (count (:selected_dates @ratom)) (:required_days @ratom))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -162,6 +173,7 @@
         (let [private-id (:user_private_id @ratom)
               body {:json-params {:name (:name @ratom)
                                   :email (:email @ratom)
+                                  :phone (:phone @ratom)
                                   :yacht_name (:yacht_name @ratom)
                                   :selected_dates (:selected_dates @ratom)}}
               request (if private-id
@@ -224,6 +236,14 @@
              :class (input-class-name simple-input-validation (:yacht_name @ratom))
              :value (:yacht_name @ratom)
              :on-change #(update-state-from-text-input :yacht_name %)}]
+    ]
+   [:div.contact_entry
+    [:div.contact_title "Puhelinnumerosi:"]
+    [:input {:type "tel"
+             :maxLength 25
+             :class (input-class-name phone-input-validation (:phone @ratom))
+             :value (:phone @ratom)
+             :on-change #(update-state-from-text-input :phone %)}]
     ]
    [:div.contact_entry
     [:div.contact_title "Sähköpostiosoitteesi:"]
