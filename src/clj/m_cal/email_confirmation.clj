@@ -23,7 +23,7 @@
 (defn get-templated-message [name email yacht-name update-link selected-dates contact]
   (let [text-message-template (slurp (io/resource text-template-resource-file))
         html-message-template (slurp (io/resource html-template-resource-file))
-        formatted-selected-dates (map #(format-date %) selected-dates)
+        formatted-selected-dates (map #(format-date %) (sort selected-dates))
         name-out (autoclave/html-sanitize name)
         email-out (autoclave/html-sanitize email)
         yacht-name-out (autoclave/html-sanitize yacht-name)
