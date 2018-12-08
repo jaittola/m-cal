@@ -257,18 +257,26 @@
 (defn blank-element []
   [:div.blank-element {:dangerouslySetInnerHTML {:__html "&nbsp;"}}])
 
+(defn selected_day [day]
+   (if day
+     [:div.selected_day
+      [:div.selected_day_date (u/format-date day)]
+      [:input.booking_cancel_button
+       {:type "image"
+        :on-click #(remove-date-selection day)
+        :src "images/red-x.png"}]]
+     [:div.selected_day [blank-element]]))
+
 (defn selection_area [ratom]
   (let [days (vec (sort (:selected_dates @ratom)))]
     [:div.selected_days_area
-     [:div.selected_days_title "Valitsemasi vartiovuorot:"]
+     [:div.contact_title.selected_days_title "Valitsemasi vartiovuorot:"]
      [:div.selected_days_selections
       (->> (range (:required_days @ratom))
            (map (fn [dayidx]
                   (let [day (get days dayidx)]
                     ^{:key (str "day-" dayidx)}
-                    [:div.selected_day
-                     (if day (u/format-date day)
-                         [blank-element])]))))]]))
+                    [selected_day day]))))]]))
 
 (defn selection_button_area [ratom]
   (let [updating (some? (:user_private_id @ratom))]

@@ -10,6 +10,10 @@
 @calendar_cell_padding: 4px;
 @calendar_cell_button_padding: 2px;
 @select_button_padding: 0.8rem;
+@booking_cancel_dimension: 20px;
+@booking_cancel_margins: 3px 0px 3px 6px;
+@booking_cancel_height: 26px;
+@date_width_guess: 7em;
 
 @success_color: #60d360;
 @error_color: #ffcccc;
@@ -113,9 +117,13 @@ button {
     margin-bottom: @area_vertical_margin;
 }
 
-.selected_days_title, .contact_title {
+.contact_title {
     flex: 0 1 15em;
     -ms-flex: 0 1 15em;
+}
+
+.selected_days_title {
+    line-height: @booking_cancel_height;
 }
 
 .selected_days_selections {
@@ -128,8 +136,18 @@ button {
 }
 
 .selected_day {
+    display: flex;
+    display: -ms-flexbox;
+    flex-flow: row nowrap;
+    -ms-flex-flow: row nowrap;
     flex: 2 0 auto;
     -ms-flex: 2 0 auto;
+    line-height: @booking_cancel_height;
+}
+
+.selected_day_date {
+    flex: 0 1 @date_width_guess;
+    -ms-flex: 0 1 @date_width_guess;
 }
 
 .contact_input {
@@ -214,6 +232,24 @@ button {
     height: 30px;
     margin: 3px 10px 3px 3px;
     background-color: @disabled_checkbox_color;
+}
+
+.booking_cancel_button {
+    flex: 0 1 auto;
+    width: @booking_cancel_dimension;
+    height: @booking_cancel_dimension;
+    margin: @booking_cancel_margins;
+}
+
+.booking_cancel_button:active {
+    width: @booking_cancel_dimension;
+    height: @booking_cancel_dimension;
+    margin: @booking_cancel_margins;
+    box-shadow:  0 0 1px @checkbox_box_shadow_color;
+    -moz-box-shadow:  0 0 1px @checkbox_box_shadow_color;
+    -webkit-box-shadow:  0 0 1px @checkbox_box_shadow_color;
+    background-color: @pressed_checkbox_background_color;
+    outline: none;
 }
 
 .calendar-day {
