@@ -403,6 +403,13 @@
                     [render-month month booked-dates today ratom]))
              (doall))])]))
 
+(defn footer []
+  [:div.footer
+   [:div.footer_element
+    [:a.footer_link {:href "http://www.merenkavijat.fi/"} "Merenkävijät ry"]]
+   [:div.footer_element
+    [:a.footer_link {:href "http://www.merenkavijat.fi/tietosuojaseloste.html"} "Tietosuojaseloste"]]])
+
 (defn logout-link []
   [:div.logout_header
    [:div.push_right]
@@ -421,7 +428,7 @@
    [success_status_area ratom]
    [error_status_area ratom]
    [render-calendar ratom]
-   ])
+   [footer]])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize App
