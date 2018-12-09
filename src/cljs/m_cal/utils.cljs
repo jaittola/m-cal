@@ -12,8 +12,11 @@
              "Toukokuu" "Kesäkuu" "Heinäkuu" "Elokuu"
              "Syyskuu" "Lokakuu" "Marraskuu" "Joulukuu"])
 
+(defn parse-ymd [isodate]
+  (timef/parse ymd-formatter isodate))
+
 (defn format-date [isodate]
-  (let [date (timef/parse ymd-formatter isodate)
+  (let [date (parse-ymd isodate)
         weekday-str (nth weekdays (time/day-of-week date))]
     (str weekday-str " " (timef/unparse fi-formatter-long date))))
 
@@ -22,8 +25,8 @@
     (str weekday-str " " (timef/unparse fi-formatter date))))
 
 (defn make-calendar-seq [first-date last-date]
-  (let [first-date-time (timef/parse ymd-formatter first-date)
-        last-date-time (timef/parse ymd-formatter last-date)]
+  (let [first-date-time (parse-ymd first-date)
+        last-date-time (parse-ymd last-date)]
     (loop [dateidx 0
            days[]]
       (let [next-date (time/plus first-date-time (time/days dateidx))

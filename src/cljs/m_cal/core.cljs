@@ -257,18 +257,20 @@
 (defn blank-element []
   [:div.blank-element {:dangerouslySetInnerHTML {:__html "&nbsp;"}}])
 
-(defn selected_day [day]
+(defn selected_day [day today]
    (if day
      [:div.selected_day
       [:div.selected_day_date (u/format-date day)]
-      [:input.booking_cancel_button
-       {:type "image"
-        :on-click #(remove-date-selection day)
-        :src "images/red-x.png"}]]
+      (when (time/after? (u/parse-ymd day) today)
+        [:input.booking_cancel_button
+         {:type "image"
+          :on-click #(remove-date-selection day)
+          :src "images/red-x.png"}])]
      [:div.selected_day [blank-element]]))
 
 (defn selection_area [ratom]
-  (let [days (vec (sort (:selected_dates @ratom)))]
+  (let [today (time/now)
+        days (vec (sort (:selected_dates @ratom)))]
     [:div.selected_days_area
      [:div.contact_title.selected_days_title "Valitsemasi vartiovuorot:"]
      [:div.selected_days_selections
@@ -276,7 +278,7 @@
            (map (fn [dayidx]
                   (let [day (get days dayidx)]
                     ^{:key (str "day-" dayidx)}
-                    [selected_day day]))))]]))
+                    [selected_day day today]))))]]))
 
 (defn selection_button_area [ratom]
   (let [updating (some? (:user_private_id @ratom))]
@@ -395,7 +397,7 @@
         today (time/now)]
     [:div.calendar-area
      [:h2 "Varauskalenteri"]
-     (when (not (or (nil? first-date) (nil? last-date)))
+     (when (and first-date last-date)
        [:div.calendar-container
         (->> (make-calendar-seq-memo first-date last-date)
              (map (fn [month]
