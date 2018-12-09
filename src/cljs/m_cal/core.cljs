@@ -381,11 +381,12 @@
 
 (defn make-monthly-calendar-seq [first-date last-date]
   (let [calendar-by-month (->> (u/make-calendar-seq first-date last-date)
-                               (group-by :month))
+                               (group-by :year-month))
         months (sort (keys calendar-by-month))]
     (map (fn [month]
-           {:monthname (get u/months (dec month))
-            :days (get calendar-by-month month)})
+           (let [days (get calendar-by-month month)]
+             {:monthname (get u/months (dec (:month (first days))))
+              :days days}))
          months)))
 
 (def make-calendar-seq-memo (memoize make-monthly-calendar-seq))

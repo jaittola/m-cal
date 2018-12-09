@@ -1,10 +1,10 @@
 (ns m-cal.utils
   (:require
    [cljs-time.core :as time]
-   [cljs-time.coerce :as timeco]
    [cljs-time.format :as timef]))
 
 (def ymd-formatter (timef/formatters :year-month-day))
+(def ym-formatter (timef/formatter "YYYY-MM"))
 (def fi-formatter (timef/formatter "dd.MM"))
 (def fi-formatter-long (timef/formatter "dd.MM.YYYY"))
 (def weekdays ["Su" "Ma" "Ti" "Ke" "To" "Pe" "La" "Su"])
@@ -30,10 +30,10 @@
     (loop [dateidx 0
            days[]]
       (let [next-date (time/plus first-date-time (time/days dateidx))
-            next-date-time (timeco/to-long next-date)
             next-date-isoformat (timef/unparse ymd-formatter next-date)
             weekday (time/day-of-week next-date)
-            month (time/month next-date)]
+            month (time/month next-date)
+            year (time/year next-date)]
         (if (time/after? next-date last-date-time)
           days
           (recur (inc dateidx) (conj days {:dateidx dateidx
@@ -41,4 +41,5 @@
                                            :formatted-date (format-date2 next-date weekday)
                                            :weekday weekday
                                            :month month
+                                           :year-month (timef/unparse ym-formatter next-date)
                                            :isoformat next-date-isoformat})))))))
