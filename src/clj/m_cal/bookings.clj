@@ -12,12 +12,18 @@
 
 (hugsql/def-db-fns "app_queries/queries.sql")
 
-(defn database-insert-user [connection name yacht_name phone email]
-  (first (db-insert-user connection
-                         {:name name
-                          :yacht_name yacht_name
-                          :phone phone
-                          :email email})))
+(defrecord UserIDs [id secret_id])
+(defrecord User [name yacht_name phone email])
+(defrecord UserWithIDs [name yacht_name phone email id secret_id])
+(defrecord BookingValidation [user selected_dates validation-error])
+
+(defn user-with-ids-from-user [user user-ids]
+  (map->UserWithIDs (assoc user
+                           :id (:id user-ids)
+                           :secret_id (:secret_id user-ids))))
+
+(defn database-insert-user [connection user]
+  (first (db-insert-user connection user)))
 
 (defn database-insert-bookings [connection selected_dates user-id]
   (doall (mapcat (fn [day]
@@ -42,18 +48,13 @@
           :booked_date date})
        booking-id-containers selected_dates))
 
-(defn success-booking-reply [connection user-id name yacht_name email phone selected_dates]
+(defn success-booking-reply [connection user-with-ids selected_dates]
   {:status 200
-   :body {:user {:id (:id user-id)
-                 :secret_id (:secret_id user-id)
-                 :name name
-                 :yacht_name yacht_name
-                 :phone phone
-                 :email email}
+   :body {:user user-with-ids
           :selected_dates selected_dates
           :all_bookings (db-list-all-bookings connection)
           :calendar_config (config/calendar-config)
-          :update_uri (config/update-uri user-id)}})
+          :update_uri (config/update-uri user-with-ids)}})
 
 (defn error-reply [code msg & [bookings-body selected-dates]]
   (let [body (merge {:error_result msg}
@@ -93,16 +94,12 @@
   (if
       (nil? id) (error-reply 400 "Mandatory parameters missing.")
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
-             (let [user (first (db-find-user-by-secret-id connection
-                                                          {:user_secret_id (UUID/fromString id)}))
-                   selected-dates (database-get-user-selections connection (:id user))]
-               (if (nil? user) (error-reply 400 "No such user")
+             (let [user-with-ids (first (db-find-user-by-secret-id connection
+                                                                   {:secret_id (UUID/fromString id)}))
+                   selected-dates (database-get-user-selections connection (:id user-with-ids))]
+               (if (nil? user-with-ids) (error-reply 400 "No such user")
                    (success-booking-reply connection
-                                          user
-                                          (:name user)
-                                          (:yacht_name user)
-                                          (:email user)
-                                          (:phone user)
+                                          user-with-ids
                                           selected-dates))))
            (catch PSQLException pse
              (handle-psql-error pse)))))
@@ -154,22 +151,24 @@
                                           booking-date-parser-validator
                                           booking-date-range-validator]))
 
+(defn validate-booking-input [params]
+  (let [validation-result (booking-validator params)
+        {:keys [selected_dates :m-cal.validation/validation-error]} validation-result
+        user (map->User validation-result)]
+    (->BookingValidation user selected_dates validation-error)))
+
 (defn assert-bookings-not-in-the-past
   [bookings]
   (doseq [booked-date bookings]
     (if (date-str-less-or-eq booked-date (today))
       (throw (IllegalArgumentException. "date in the past")))))
 
-(defn update-booking-with-validated-params [connection user-id name yacht_name email phone selected_dates]
+(defn update-booking-with-validated-params [connection user-with-ids selected_dates]
   (try
     (db-update-user connection
-                    {:name name
-                     :yacht_name yacht_name
-                     :email email
-                     :phone phone
-                     :id (:id user-id)})
+                    user-with-ids)
     (let [db-selected-dates (db-select-user-bookings-for-update connection
-                                                              {:user_id (:id user-id)})
+                                                              {:user_id (:id user-with-ids)})
           db-selected-dates-values (map #(:booked_date %) db-selected-dates)
           bookings-to-delete (filter (fn [booking] (not (some #(= (:booked_date booking) %) selected_dates))) db-selected-dates)
           bookings-to-add (filter (fn [booking] (not (some #(= booking %) db-selected-dates-values)))
@@ -179,42 +178,34 @@
 
           inserted-bookings-ids (database-insert-bookings connection
                                                           bookings-to-add
-                                                          user-id)
+                                                          user-with-ids)
           dates-to-inserted-booking-ids (map-dates-to-booking-ids inserted-bookings-ids
                                                                   bookings-to-add)
 
           _ (db-common/database-insert-booking-log connection
                                                    bookings-to-delete
-                                                   user-id
+                                                   user-with-ids
                                                    db-common/log-entry-booking-release)
           _ (db-common/database-insert-booking-log connection
                                                    dates-to-inserted-booking-ids
-                                                   user-id
+                                                   user-with-ids
                                                    db-common/log-entry-booking-book)]
-      (db-add-to-confirmation-queue connection {:users_id (:id user-id)})
+      (db-add-to-confirmation-queue connection user-with-ids)
       (success-booking-reply connection
-                             user-id
-                             name
-                             yacht_name
-                             email
-                             phone
+                             user-with-ids
                              selected_dates))
     (catch PSQLException pse
-      (handle-psql-error pse (:id user-id)))
+      (handle-psql-error pse (:id user-with-ids)))
     (catch IllegalArgumentException e
       (error-reply 400 "trying to modify bookings in the past"))))
 
 (defn insert-booking [params]
-  (let [{:keys [name yacht_name email phone selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
+  (let [{:keys [user selected_dates validation-error]} (validate-booking-input params)]
     (if validation-error
       (error-reply 400 validation-error)
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
              (assert-bookings-not-in-the-past selected_dates)
-             (let [user-id (database-insert-user connection
-                                                 name
-                                                 yacht_name
-                                                 phone
-                                                 email)
+             (let [user-id (database-insert-user connection user)
                    bookings-ids (database-insert-bookings connection
                                                           selected_dates
                                                           user-id)
@@ -224,13 +215,9 @@
                                                             dates-to-booking-ids
                                                             user-id
                                                             db-common/log-entry-booking-book)]
-               (db-add-to-confirmation-queue connection {:users_id (:id user-id)})
+               (db-add-to-confirmation-queue connection user-id)
                (success-booking-reply connection
-                                      user-id
-                                      name
-                                      yacht_name
-                                      email
-                                      phone
+                                      (user-with-ids-from-user user user-id)
                                       selected_dates)))
            (catch PSQLException pse
              (handle-psql-error pse))
@@ -238,20 +225,17 @@
              (error-reply 400 "Trying to make booking in the past"))))))
 
 (defn update-booking [secret_id params]
-  (let [{:keys [name yacht_name email phone selected_dates :m-cal.validation/validation-error]} (booking-validator params)]
+  (let [{:keys [user selected_dates validation-error]} (validate-booking-input params)]
     (cond
       validation-error (error-reply 400 validation-error)
       (nil? secret_id) (error-reply 400 "Mandatory parameters missing.")
       :else (try (jdbc/with-db-transaction [connection @db-common/dbspec]
-                   (let [user (first (db-find-user-by-secret-id connection
-                                                                {:user_secret_id (UUID/fromString secret_id)}))]
-                     (if (nil? user) (error-reply 400 "No such user")
+                   (let [user-from-db (first (db-find-user-by-secret-id connection
+                                                                        {:secret_id (UUID/fromString secret_id)}))
+                         new-user (user-with-ids-from-user user user-from-db)]
+                     (if (nil? user-from-db) (error-reply 400 "No such user")
                          (update-booking-with-validated-params connection
-                                                               user
-                                                               name
-                                                               yacht_name
-                                                               email
-                                                               phone
+                                                               new-user
                                                                selected_dates))))
                  (catch PSQLException pse
                    (handle-psql-error pse))))))

@@ -12,7 +12,7 @@ JOIN users u ON u.id = b.users_id
 ORDER BY booked_date;
 
 -- :name db-insert-user :<!
--- :doc Insert a user into the database
+-- :doc Insert a user into the database. Return data compatible with UserIDs records.
 INSERT INTO users (username, yachtname, phone, email)
 VALUES (:name, :yacht_name, :phone, :email)
 RETURNING id, secret_id;
@@ -57,7 +57,7 @@ FROM booking
 WHERE users_id = :user_id;
 
 -- :name db-find-user-by-secret-id :? :*
--- :doc Find user by secret id
+-- :doc Find user by secret id. Return data compatible with UserWithIDs records.
 SELECT
 id,
 secret_id,
@@ -66,7 +66,7 @@ yachtname AS yacht_name,
 email,
 phone
 FROM users u
-WHERE secret_id = :user_secret_id;
+WHERE secret_id = :secret_id;
 
 -- :name db-delete-booking :! :n
 -- :doc Delete bookings from database
@@ -76,7 +76,7 @@ WHERE id in (:v*:ids);
 -- :name db-add-to-confirmation-queue :!
 -- :doc Add an entry for sending an e-mail confirmation.
 INSERT INTO email_confirmation_queue (users_id)
-VALUES (:users_id)
+VALUES (:id)
 ON CONFLICT (users_id) DO UPDATE SET timestamp = NOW();
 
 -- :name db-get-email-confirmation-queue-next-entry :? :*
