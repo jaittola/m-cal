@@ -350,17 +350,6 @@
       has-required-bookings [day-details-free-but-not-bookable]
       :else [day-details-bookable isoday])))
 
-(defn make-monthly-calendar-seq [first-date last-date]
-  (let [calendar-by-month (->> (u/make-calendar-seq first-date last-date)
-                               (group-by :month))
-        months (sort (keys calendar-by-month))]
-    (map (fn [month]
-           {:monthname (get u/months (dec month))
-            :days (get calendar-by-month month)})
-         months)))
-
-(def make-calendar-seq-memo (memoize make-monthly-calendar-seq))
-
 (defn render-day [daydata today ratom]
   (let [day (:day daydata)
         thedate (:date (:day daydata))
@@ -389,6 +378,17 @@
           (map (fn [daydata]
                  ^{:key (:key daydata)} [render-day daydata today ratom]))
           (doall))]]])
+
+(defn make-monthly-calendar-seq [first-date last-date]
+  (let [calendar-by-month (->> (u/make-calendar-seq first-date last-date)
+                               (group-by :month))
+        months (sort (keys calendar-by-month))]
+    (map (fn [month]
+           {:monthname (get u/months (dec month))
+            :days (get calendar-by-month month)})
+         months)))
+
+(def make-calendar-seq-memo (memoize make-monthly-calendar-seq))
 
 (defn render-calendar [ratom]
   (let [first-date (:first_date @ratom)
