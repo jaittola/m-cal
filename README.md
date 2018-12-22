@@ -115,6 +115,15 @@ After starting the server with `lein ring server` or `lein ring
 server-headless` (remember the environment variables), point your web
 browser to http://localhost:3000
 
+## Interactive development for the backend with emacs)
+
+Run `lein repl :headless` (with the environment variables). Then, in
+emacs, run `cider-connect`. When promoted for hostname and port, enter
+`localhost` and the repl port that lein writes out in its output.
+
+To actually run the ring server, issue the command `(-main 3000)` in
+the repl in emacs. Then, point your browser to localhost:3000.
+
 ## Setting up a development database
 
 This application uses PostgreSQL for storing the bookings. To create a

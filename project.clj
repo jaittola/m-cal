@@ -35,7 +35,6 @@
   :resource-paths [ "resources" "src/db/queries" ]
   :main m-cal.handler
 
-
   :clean-targets ^{:protect false} ["resources/public/js"
                                     "target"]
   :figwheel {:ring-handler m-cal.handler/app
@@ -47,8 +46,8 @@
              {:dependencies [[figwheel-sidecar "0.5.18"]
                              [binaryage/devtools "0.9.10"]
                              [cider/piggieback "0.3.10"]]
-              :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
-              :plugins      [[lein-figwheel "0.5.18"]]}
+              :plugins      [[lein-figwheel "0.5.18"]
+                             [cider/cider-nrepl "0.18.0"]]}
 
              :test
              {:test-paths ["test/clj"]}
