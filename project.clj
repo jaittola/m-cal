@@ -1,5 +1,5 @@
 (defproject m-cal "0.1.0-SNAPSHOT"
-  :dependencies [[org.clojure/clojure "1.9.0"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/clojurescript "1.10.339"]
                  [org.clojure/spec.alpha "0.2.176"]
                  [reagent "0.8.1"]
@@ -43,16 +43,12 @@
   :less {:source-paths ["less"]
          :target-path  "resources/public/css"}
 
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
-
   :profiles {:dev
-             {:dependencies [
-                             [figwheel-sidecar "0.5.16"]
-                             [com.cemerick/piggieback "0.2.1"]
-                             [binaryage/devtools "0.9.9"]]
-
-              :plugins      [[lein-figwheel "0.5.16"]]
-              }
+             {:dependencies [[figwheel-sidecar "0.5.18"]
+                             [binaryage/devtools "0.9.10"]
+                             [cider/piggieback "0.3.10"]]
+              :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
+              :plugins      [[lein-figwheel "0.5.18"]]}
 
              :test
              {:test-paths ["test/clj"]}
