@@ -15,10 +15,10 @@
   (go-loop []
     (try (jdbc/with-db-transaction [connection @db-common/dbspec]
            (doseq [next-confirm (db-get-email-confirmation-queue-next-entry connection)]
-             (let [booked-dates (seq (.getArray (:booked_dates next-confirm)))
+             (let [booked-dates (:booked_dates next-confirm)
                    dates-to-booking-ids (map (fn [id date] {:booking_id id
                                                             :booked_date date})
-                                             (seq (.getArray (:booking_ids next-confirm)))
+                                             (:booking_ids next-confirm)
                                              booked-dates)
                    confirm-result (email-confirmation/send-confirmation (:username next-confirm)
                                                                         (:email next-confirm)

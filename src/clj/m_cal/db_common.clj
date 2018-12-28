@@ -1,5 +1,6 @@
 (ns m-cal.db-common
-  (:require [jdbc.pool.c3p0 :as pool]
+  (:require [m-cal.pg-types]
+            [jdbc.pool.c3p0 :as pool]
             [hugsql.core :as hugsql]))
 
 (def log-entry-booking-book 1)
