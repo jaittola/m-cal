@@ -185,11 +185,13 @@
           _ (db-common/database-insert-booking-log connection
                                                    bookings-to-delete
                                                    user-with-ids
-                                                   db-common/log-entry-booking-release)
+                                                   db-common/log-entry-booking-release
+                                                   user-with-ids)
           _ (db-common/database-insert-booking-log connection
                                                    dates-to-inserted-booking-ids
                                                    user-with-ids
-                                                   db-common/log-entry-booking-book)]
+                                                   db-common/log-entry-booking-book
+                                                   user-with-ids)]
       (db-add-to-confirmation-queue connection user-with-ids)
       (success-booking-reply connection
                              user-with-ids
@@ -214,7 +216,8 @@
                    _ (db-common/database-insert-booking-log connection
                                                             dates-to-booking-ids
                                                             user-id
-                                                            db-common/log-entry-booking-book)]
+                                                            db-common/log-entry-booking-book
+                                                            user)]
                (db-add-to-confirmation-queue connection user-id)
                (success-booking-reply connection
                                       (user-with-ids-from-user user user-id)

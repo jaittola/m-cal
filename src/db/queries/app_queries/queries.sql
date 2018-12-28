@@ -25,8 +25,8 @@ RETURNING id;
 
 -- :name db-insert-booking-log :<!
 -- :doc Insert a booking log entry into the database
-INSERT INTO booking_log (booked_date,  users_id, booking_id, operation)
-VALUES (TO_DATE(:booked_date, 'YYYY-MM-DD'), :users_id, :booking_id, :operation)
+INSERT INTO booking_log (booked_date,  users_id, booking_id, operation, user_data)
+VALUES (TO_DATE(:booked_date, 'YYYY-MM-DD'), :users_id, :booking_id, :operation, :user_data)
 RETURNING id;
 
 -- :name db-update-user :! :n
