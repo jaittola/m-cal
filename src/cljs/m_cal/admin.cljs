@@ -32,6 +32,9 @@
          :error-status msg
          :success-status nil))
 
+(defn set-event-log [events]
+  (swap! app-state assoc :event-log events))
+
 (defn load-bookings []
   (go (let [response (<! (http/get "/admin/api/1/all_bookings"))
             status-ok (= (:status response) 200)
@@ -43,10 +46,26 @@
         (when config
           (set-calendar-config config))
         (if bookings
-          (set-bookings bookings)
+          (do
+            (set-error-status nil)
+            (set-bookings bookings))
           (do
             (set-bookings [])
             (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen"))))))
+
+(defn load-event-log []
+  (go (let [response (<! (http/get "/admin/api/1/event_log"))
+            status-ok (= (:status response) 200)
+            body (:body response)
+            events (when status-ok
+                     (:events body))]
+        (if events
+          (do
+            (set-error-status nil)
+            (set-event-log events))
+          (do
+            (set-event-log [])
+            (set-error-status "Tapahtumien haku epäonnistui. Yritä myöhemmin uudelleen"))))))
 
 (defn set-page-state [new-state]
   (swap! app-state assoc
@@ -54,24 +73,32 @@
          :event-log [])
   (case new-state
     :bookings (load-bookings)
+    :event-log (load-event-log)
     nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Page layout
 
-(defn booking-update-link [booking]
+(defn booking-update-link [secret-id link-text]
+  [:a {:href (str "/bookings/index?user=" secret-id)} link-text])
+
+(defn booking-update-link-for-booking [booking link-text]
   (let [secret-id (:secret_id booking)]
-    (str "/bookings/index?user=" secret-id)))
+    (booking-update-link secret-id link-text)))
+
+(defn user-details [userdata]
+  [:div
+   (:name userdata) [:br]
+   (:yacht_name userdata) [:br]
+   (:phone userdata) [:br]
+   (:email userdata) [:br]])
 
 (defn booking-or-free [today daydata ratom] ""
   (let [booking (:booking daydata)]
     (if booking
       [:div
-       (:name booking) [:br]
-       (:yacht_name booking) [:br]
-       (:phone booking) [:br]
-       (:email booking) [:br]
-       [:a {:href (booking-update-link booking)} "Muokkaa"]]
+       [user-details booking]
+       [booking-update-link-for-booking booking "Muokkaa"]]
       [u/blank-element])))
 
 (defn render-booking-calendar [ratom]
@@ -82,8 +109,47 @@
       [u/render-calendar ratom first-date last-date bookings booking-or-free]
       [:div])))
 
+(defn map-log-operation [operation]
+  (case operation
+    1 "Vuoron varaus"
+    2 "Vuoron vapautus"
+    3 "Vahvistussähköpostin lähetys"
+    4 "Vahvistussähköpostin lähetys (sähköposti ei käytössä)"
+    5 "Käyttäjän tietojen päivitys"
+    operation))
+
+(defn render-event-row [event]
+  (let [booked-date (:booked_date event)
+        formatted-booked-date (if booked-date
+                                (u/format-date booked-date)
+                                "")]
+    [:tr.event-row
+     [:td.event-cell (:event_timestamp event)]
+     [:td.event-cell formatted-booked-date]
+     [:td.event-cell (map-log-operation (:operation event))]
+     [:td.event-cell (:user_id event)]
+     [:td.event-cell
+      [user-details (:user_data event)]
+      [booking-update-link (:user_secret_id event)
+       "Muokkaa käyttäjän tämänhetkisiä varauksia"]]]))
+
 (defn render-event-log [ratom]
-  [:div])
+  (let [events (:event-log @ratom)]
+    [:div.event-log-area
+     [:h2 "Tapahtumaloki"]
+     [:table.event-log-table
+      [:thead.event-heading-row
+       [:tr
+        [:th.event-heading "Tapahtuman aikaleima"]
+        [:th.event-heading "Varattu päivä"]
+        [:th.event-heading "Toimenpide"]
+        [:th.event-heading "Käyttäjän tunniste"]
+        [:th.event-heading "Käyttäjän tiedot tapahtumassa"]]]
+      [:tbody
+       (map (fn [event]
+              ^{:key (str "event-" (:log_id event))}
+              [render-event-row event])
+            events)]]]))
 
 (defn page-modes []
   [:div
