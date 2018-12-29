@@ -90,6 +90,14 @@
       (error-reply-409 user-id)
       (error-reply 500 "Storing bookings to database failed"))))
 
+(defn admin-list-eventlog []
+  (try (jdbc/with-db-connection [connection @db-common/dbspec]
+         (let [events (db-query-eventlog connection)]
+           {:status 200
+            :body {:events events}}))
+       (catch PSQLException pse
+             (handle-psql-error pse))))
+
 (defn list-bookings []
   {:body {:all_bookings (load-all-bookings)
           :calendar_config (config/calendar-config)}})

@@ -54,6 +54,7 @@
   (GET "/index" [] (resp/file-response "resources/public/admin_index.html"))
   (GET "/" [] (resp/redirect "index"))
   (GET "/api/1/all_bookings" [] (bookings/admin-list-bookings))
+  (GET "/api/1/event_log" [] (bookings/admin-list-eventlog))
   (route/resources "/"))
 
 (defroutes other-routes

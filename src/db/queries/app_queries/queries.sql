@@ -44,6 +44,21 @@ INSERT INTO booking_log (booked_date,  users_id, booking_id, operation, user_dat
 VALUES (TO_DATE(:booked_date, 'YYYY-MM-DD'), :users_id, :booking_id, :operation, :user_data)
 RETURNING id;
 
+-- :name db-query-eventlog :? :*
+-- :doc List all events in the log
+SELECT
+u.id AS user_id,
+log.id AS log_id,
+log.booking_id,
+TO_CHAR(log.booked_date, 'YYYY-MM-DD') AS booked_date,
+TO_CHAR(log.timestamp, 'YYYY-MM-DD"T"HH24:MI:SS') AS event_timestamp,
+log.operation,
+log.user_data,
+u.secret_id AS user_secret_id
+FROM booking_log log
+JOIN users u on log.users_id = u.id
+ORDER BY log.id DESC;
+
 -- :name db-update-user :! :n
 -- :doc Update a user's details in the database
 UPDATE users
