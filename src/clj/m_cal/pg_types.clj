@@ -167,12 +167,12 @@
 (defmethod read-pgobject :json
   [^org.postgresql.util.PGobject x]
   (when-let [val (.getValue x)]
-    (json/read-str val)) :key-fn keyword)
+    (json/read-str val :key-fn keyword)))
 
 (defmethod read-pgobject :jsonb
   [^org.postgresql.util.PGobject x]
   (when-let [val (.getValue x)]
-    (json/read-str val)) :key-fn keyword)
+    (json/read-str val :key-fn keyword)))
 
 (defmethod read-pgobject :default
   [^org.postgresql.util.PGobject x]
