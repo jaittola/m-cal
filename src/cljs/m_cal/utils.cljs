@@ -1,14 +1,14 @@
 (ns m-cal.utils
-  (:require
-   [cljs-time.core :as time]
-   [cljs-time.format :as timef]))
+  (:require [cljs-time.core :as time]
+            [cljs-time.format :as timef]
+            [clojure.string :as string]))
 
 (def ymd-formatter (timef/formatters :year-month-day))
 (def ym-formatter (timef/formatter "YYYY-MM"))
 (def fi-formatter (timef/formatter "dd.MM"))
 (def fi-formatter-long (timef/formatter "dd.MM.YYYY"))
 (def weekdays ["Su" "Ma" "Ti" "Ke" "To" "Pe" "La" "Su"])
-(def months ["Tammikuu" "Helmikuu" "Maaliskuu" "Huhtikuu"
+(def month-names ["Tammikuu" "Helmikuu" "Maaliskuu" "Huhtikuu"
              "Toukokuu" "Kesäkuu" "Heinäkuu" "Elokuu"
              "Syyskuu" "Lokakuu" "Marraskuu" "Joulukuu"])
 
@@ -43,3 +43,79 @@
                                            :month month
                                            :year-month (timef/unparse ym-formatter next-date)
                                            :isoformat next-date-isoformat})))))))
+
+(defn make-monthly-calendar-seq [first-date last-date]
+  (let [calendar-by-month (->> (make-calendar-seq first-date last-date)
+                               (group-by :year-month))
+        months-in-calendar (sort (keys calendar-by-month))]
+    (map (fn [month]
+           (let [days (get calendar-by-month month)]
+             {:monthname (get month-names (dec (:month (first days))))
+              :days days}))
+         months-in-calendar)))
+
+(def make-calendar-seq-memo (memoize make-monthly-calendar-seq))
+
+(defn status-area [status-property class ratom]
+   (let [status (status-property @ratom)]
+     (if status
+       [:div {:class class} status]
+       [:div])))
+
+(defn success_status_area [ratom]
+  [status-area :success_status "success_status_area" ratom])
+
+(defn error_status_area [ratom]
+  [status-area :error_status "error_status_area" ratom])
+
+(defn blank-element []
+  [:div.blank-element {:dangerouslySetInnerHTML {:__html "&nbsp;"}}])
+
+(defn find-booking-for [bookings day]
+  (first (filter #(== (:isoformat day) (:booked_date %)) bookings)))
+
+(defn render-day [daydata today ratom render-booking-details]
+  (let [day (:day daydata)
+        thedate (:date (:day daydata))
+        is-in-past (time/before? thedate today)
+        booking (:booking daydata)
+        classes (string/join " " (filter some?
+                                         ["calendar-day"
+                                          (when (== 7 (:weekday day)) "calendar-sunday")
+                                          (when is-in-past "calendar-day-past")]))]
+    [:tr
+     [:td {:class (str "calendar-date-cell " classes)}
+      (:formatted-date day)]
+     [:td {:class (str "calendar-booking-cell " classes)}
+      [render-booking-details today daydata ratom]]]))
+
+(defn render-month [{:keys [monthname days]} booked-dates today ratom render-booking-details]
+  [:div.calendar-month
+   [:h4 monthname]
+   [:table.calendar-month-table
+    [:tbody
+     (->> days
+          (map (fn [day]
+                 {:day day
+                  :booking (find-booking-for booked-dates day)
+                  :key (str "day-" (:dateidx day))}))
+          (map (fn [daydata]
+                 ^{:key (:key daydata)} [render-day
+                                         daydata
+                                         today
+                                         ratom
+                                         render-booking-details]))
+          (doall))]]])
+
+(defn render-calendar [ratom first-date last-date bookings render-booking-details]
+  (let [today (time/now)]
+    [:div.calendar-area
+     [:h2 "Varauskalenteri"]
+     (when (and first-date last-date)
+       [:div.calendar-container
+        (->> (make-calendar-seq-memo first-date last-date)
+             (map (fn [month]
+                    ^{:key (str "month-" (:monthname month))}
+                    [render-month month bookings today ratom render-booking-details]))
+             (doall))])]))
+

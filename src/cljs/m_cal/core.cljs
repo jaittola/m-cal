@@ -254,9 +254,6 @@
     ]
    ])
 
-(defn blank-element []
-  [:div.blank-element {:dangerouslySetInnerHTML {:__html "&nbsp;"}}])
-
 (defn selected_day [day today]
    (if day
      [:div.selected_day
@@ -266,7 +263,7 @@
          {:type "image"
           :on-click #(remove-date-selection day)
           :src "images/red-x.png"}])]
-     [:div.selected_day [blank-element]]))
+     [:div.selected_day [u/blank-element]]))
 
 (defn selection_area [ratom]
   (let [today (time/now)
@@ -294,21 +291,6 @@
        [:button.selection {:disabled (:request_in_progress @ratom)
                            :on-click #(load-bookings ratom)}
         "Peruuta muutokset"])]))
-
-(defn status-area [status-property class ratom]
-   (let [status (status-property @ratom)]
-     (if status
-       [:div {:class class} status]
-       [:div])))
-
-(defn success_status_area [ratom]
-  [status-area :success_status "success_status_area" ratom])
-
-(defn error_status_area [ratom]
-  [status-area :error_status "error_status_area" ratom])
-
-(defn find-booking-for [bookings day]
-  (first (filter #(== (:isoformat day) (:booked_date %)) bookings)))
 
 (defn booking-details [booking]
   [:div (:name booking) [:br] (:yacht_name booking)])
@@ -346,65 +328,15 @@
       (and is-booked-for-me is-in-future) [calendar-cell-booked-for-me isoday ratom]
       (and is-booked-for-me (not is-in-future)) [booking-details booking]
       (and booking (not (= (:user_id booking) (:user_public_id @ratom)))) [booking-details booking]
-      (and (nil? booking) (not is-in-future)) blank-element
+      (and (nil? booking) (not is-in-future)) u/blank-element
       has-required-bookings [day-details-free-but-not-bookable]
       :else [day-details-bookable isoday])))
 
-(defn render-day [daydata today ratom]
-  (let [day (:day daydata)
-        thedate (:date (:day daydata))
-        is-in-past (time/before? thedate today)
-        booking (:booking daydata)
-        classes (string/join " " (filter some?
-                                         ["calendar-day"
-                                          (when (== 7 (:weekday day)) "calendar-sunday")
-                                          (when is-in-past "calendar-day-past")]))]
-    [:tr
-     [:td {:class (str "calendar-date-cell " classes)}
-      (:formatted-date day)]
-     [:td {:class (str "calendar-booking-cell " classes)}
-      [booking-or-free today daydata ratom]]]))
-
-(defn render-month [{:keys [monthname days]} booked-dates today ratom]
-  [:div.calendar-month
-   [:h4 monthname]
-   [:table.calendar-month-table
-    [:tbody
-     (->> days
-          (map (fn [day]
-                 {:day day
-                  :booking (find-booking-for booked-dates day)
-                  :key (str "day-" (:dateidx day))}))
-          (map (fn [daydata]
-                 ^{:key (:key daydata)} [render-day daydata today ratom]))
-          (doall))]]])
-
-(defn make-monthly-calendar-seq [first-date last-date]
-  (let [calendar-by-month (->> (u/make-calendar-seq first-date last-date)
-                               (group-by :year-month))
-        months (sort (keys calendar-by-month))]
-    (map (fn [month]
-           (let [days (get calendar-by-month month)]
-             {:monthname (get u/months (dec (:month (first days))))
-              :days days}))
-         months)))
-
-(def make-calendar-seq-memo (memoize make-monthly-calendar-seq))
-
-(defn render-calendar [ratom]
-  (let [first-date (:first_date @ratom)
-        last-date (:last_date @ratom)
-        booked-dates (:booked_dates @ratom)
-        today (time/now)]
-    [:div.calendar-area
-     [:h2 "Varauskalenteri"]
-     (when (and first-date last-date)
-       [:div.calendar-container
-        (->> (make-calendar-seq-memo first-date last-date)
-             (map (fn [month]
-                    ^{:key (str "month-" (:monthname month))}
-                    [render-month month booked-dates today ratom]))
-             (doall))])]))
+(defn render-booking-calendar [ratom]
+  (let [bookings (:booked_dates @ratom)
+        first-date (:first_date @ratom)
+        last-date (:last_date @ratom)]
+    [u/render-calendar ratom first-date last-date bookings booking-or-free]))
 
 (defn footer []
   [:div.footer
@@ -428,13 +360,14 @@
    [contact_entry ratom]
    [selection_area ratom]
    [selection_button_area ratom]
-   [success_status_area ratom]
-   [error_status_area ratom]
-   [render-calendar ratom]
+   [u/success_status_area ratom]
+   [u/error_status_area ratom]
+   [render-booking-calendar ratom]
    [footer]])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize App
+
 
 (defn dev-setup []
   (when ^boolean js/goog.DEBUG
