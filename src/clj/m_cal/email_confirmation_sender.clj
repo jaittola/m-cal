@@ -20,7 +20,7 @@
                                                             :booked_date date})
                                              (:booking_ids next-confirm)
                                              booked-dates)
-                   confirm-result (email-confirmation/send-confirmation (:username next-confirm)
+                   confirm-result (email-confirmation/send-confirmation (:name next-confirm)
                                                                         (:email next-confirm)
                                                                         (:yacht_name next-confirm)
                                                                         (config/update-uri next-confirm)
@@ -29,7 +29,8 @@
                  (do
                    (db-common/database-insert-booking-log connection
                                                           dates-to-booking-ids
-                                                          {:id (:users_id next-confirm)}
+                                                          (assoc next-confirm
+                                                                 :id (:users_id next-confirm))
                                                           confirm-result)
                    (db-delete-email-confirmation-queue-entry connection
                                                              {:id (:queue_id next-confirm)}))))))

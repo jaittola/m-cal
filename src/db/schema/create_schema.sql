@@ -19,12 +19,12 @@ CREATE TABLE IF NOT EXISTS booking (
 
 CREATE TABLE IF NOT EXISTS booking_log (
        id SERIAL PRIMARY KEY,
-       booking_id INTEGER NOT NULL,
+       booking_id INTEGER,
        users_id INTEGER NOT NULL REFERENCES users(id),
-       booked_date DATE NOT NULL,
+       booked_date DATE,
        timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
-       operation SMALLINT NOT NULL -- 1 = booking, 2 = release, 3 = confirmation email
-              CONSTRAINT booking_log_operation_check CHECK (operation IN (1, 2, 3, 4)),
+       operation SMALLINT NOT NULL
+              CONSTRAINT booking_log_operation_check CHECK (operation IN (1, 2, 3, 4, 5)),
        user_data JSONB
 );
 

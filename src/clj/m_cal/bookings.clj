@@ -180,18 +180,20 @@
                                                           bookings-to-add
                                                           user-with-ids)
           dates-to-inserted-booking-ids (map-dates-to-booking-ids inserted-bookings-ids
-                                                                  bookings-to-add)
-
-          _ (db-common/database-insert-booking-log connection
-                                                   bookings-to-delete
-                                                   user-with-ids
-                                                   db-common/log-entry-booking-release
-                                                   user-with-ids)
-          _ (db-common/database-insert-booking-log connection
-                                                   dates-to-inserted-booking-ids
-                                                   user-with-ids
-                                                   db-common/log-entry-booking-book
-                                                   user-with-ids)]
+                                                                  bookings-to-add)]
+      (if (not (every? empty? [bookings-to-delete bookings-to-add]))
+        (do
+          (db-common/database-insert-booking-log connection
+                                                 bookings-to-delete
+                                                 user-with-ids
+                                                 db-common/log-entry-booking-release)
+          (db-common/database-insert-booking-log connection
+                                                 dates-to-inserted-booking-ids
+                                                 user-with-ids
+                                                 db-common/log-entry-booking-book))
+        (db-common/database-insert-booking-log-without-date connection
+                                                            user-with-ids
+                                                            db-common/log-entry-contact-update))
       (db-add-to-confirmation-queue connection user-with-ids)
       (success-booking-reply connection
                              user-with-ids
@@ -213,11 +215,11 @@
                                                           user-id)
                    dates-to-booking-ids (map-dates-to-booking-ids bookings-ids
                                                                   selected_dates)
+                   user-details (user-with-ids-from-user user user-id)
                    _ (db-common/database-insert-booking-log connection
                                                             dates-to-booking-ids
-                                                            user-id
-                                                            db-common/log-entry-booking-book
-                                                            user)]
+                                                            user-details
+                                                            db-common/log-entry-booking-book)]
                (db-add-to-confirmation-queue connection user-id)
                (success-booking-reply connection
                                       (user-with-ids-from-user user user-id)

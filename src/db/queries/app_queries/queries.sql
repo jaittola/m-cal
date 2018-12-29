@@ -104,8 +104,9 @@ q.email_confirmation_queue_id AS queue_id,
 u.id AS users_id,
 u.secret_id,
 u.email,
-u.username,
+u.username AS name,
 u.yachtname AS yacht_name,
+u.phone,
 array_agg(ub.booked_date) as booked_dates,
 array_agg(ub.booking_id) as booking_ids
 FROM users u
