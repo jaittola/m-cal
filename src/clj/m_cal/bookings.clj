@@ -67,6 +67,10 @@
   (jdbc/with-db-connection [connection @db-common/dbspec]
     (db-list-all-bookings connection)))
 
+(defn load-all-bookings-for-admin []
+  (jdbc/with-db-connection [connection @db-common/dbspec]
+    (db-list-all-bookings-for-admin connection)))
+
 (defn error-reply-409 [& [user-id]]
   (try (jdbc/with-db-transaction [connection @db-common/dbspec]
          (error-reply 409 "The dates you selected were already booked"
@@ -88,6 +92,10 @@
 
 (defn list-bookings []
   {:body {:all_bookings (load-all-bookings)
+          :calendar_config (config/calendar-config)}})
+
+(defn admin-list-bookings []
+  {:body {:all_bookings (load-all-bookings-for-admin)
           :calendar_config (config/calendar-config)}})
 
 (defn list-bookings-with-user [id]

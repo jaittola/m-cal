@@ -11,6 +11,21 @@ FROM booking b
 JOIN users u ON u.id = b.users_id
 ORDER BY booked_date;
 
+-- :name db-list-all-bookings-for-admin :? :*
+-- :doc List all bookings
+SELECT
+b.id,
+TO_CHAR(b.booked_date, 'YYYY-MM-DD') as booked_date,
+b.users_id as user_id,
+u.username as name,
+u.yachtname as yacht_name,
+u.email,
+u.phone,
+u.secret_id
+FROM booking b
+JOIN users u ON u.id = b.users_id
+ORDER BY booked_date;
+
 -- :name db-insert-user :<!
 -- :doc Insert a user into the database. Return data compatible with UserIDs records.
 INSERT INTO users (username, yachtname, phone, email)

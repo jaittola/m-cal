@@ -50,6 +50,12 @@
   (route/resources "/")
   )
 
+(defroutes admin-routes
+  (GET "/index" [] (resp/file-response "resources/public/admin_index.html"))
+  (GET "/" [] (resp/redirect "index"))
+  (GET "/api/1/all_bookings" [] (bookings/admin-list-bookings))
+  (route/resources "/"))
+
 (defroutes other-routes
   (GET "/" [] (resp/redirect "/bookings/index"))
   (ANY "/testi" [] (resp/response "Hello, world!"))
@@ -69,10 +75,21 @@
       {:status 404}
       (handler req))))
 
+(defn with-admin-ui [handler]
+  (fn [req]
+    (if (not (env :has-admin-ui))
+      {:status 404}
+      (handler req))))
+
 (def app
   (routes
     (-> (context "/bookings" []
           (-> booking-routes
+              (wrap-basicauth-if-auth-params (get-auth-params))
+              (middleware/wrap-json-body {:keywords? true})
+              (middleware/wrap-json-response))))
+    (-> (context "/admin" []
+          (-> (with-admin-ui admin-routes)
               (wrap-basicauth-if-auth-params (get-auth-params))
               (middleware/wrap-json-body {:keywords? true})
               (middleware/wrap-json-response))))
