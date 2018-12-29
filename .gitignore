@@ -22,3 +22,4 @@ resources/public/css/site.css
 /local-database
 /.idea
 /m-cal.iml
+.rebel_readline_history
