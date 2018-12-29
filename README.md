@@ -183,7 +183,9 @@ Automatically recompile css file on change.
 lein less auto
 ```
 
-### Run application:
+### Run the main application:
+
+Set the environment variables as described above
 
 ```
 lein clean
@@ -193,6 +195,18 @@ lein figwheel dev
 Figwheel will automatically push cljs changes to the browser.
 
 Wait a bit, then browse to [http://localhost:3449](http://localhost:3449).
+
+### Run the admin application
+
+The admin application has a separate cljs build. It works similarly to
+the main app but has a separate build target. In addition, you must set HAS_ADMIN_UI=1 into the environment.
+
+To develop the admin UI, set HAS_ADMIN_UI=1 (and other environment
+variables as appropriate), and run
+
+```
+lein figwheel dev-admin-dev
+```
 
 ## Production Build
 

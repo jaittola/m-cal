@@ -53,7 +53,10 @@
              {:test-paths ["test/clj"]}
 
              :uberjar {
-                       :prep-tasks [["cljsbuild" "once" "min"] ["less" "once"] "compile"]
+                       :prep-tasks [["cljsbuild" "once" "min"]
+                                    ["cljsbuild" "once" "admin-min"]
+                                    ["less" "once"]
+                                    "compile"]
                        :omit-source true
                        :aot :all}}
 
@@ -67,6 +70,16 @@
                                :closure-defines {goog.DEBUG false}
                                :pretty-print    false}}
 
+               {:id           "admin-min"
+                :source-paths ["src/cljs"]
+                :compiler     {:main            m-cal.admin
+                               :optimizations   :advanced
+                               :output-to       "resources/public/js/admin/admin-app.js"
+                               :output-dir      "resources/public/js/admin"
+                               :elide-asserts   true
+                               :closure-defines {goog.DEBUG false}
+                               :pretty-print    false}}
+
                {:id           "dev"
                 :source-paths ["src/cljs"]
                 :figwheel     {:on-jsload "m-cal.core/reload"}
@@ -75,6 +88,22 @@
                                :output-to            "resources/public/js/app.js"
                                :output-dir           "resources/public/js/dev"
                                :asset-path           "js/dev"
+                               :source-map-timestamp true
+                               :preloads             [devtools.preload]
+                    :external-config
+                               {:devtools/config
+                                {:features-to-install    [:formatters :hints]
+                                 :fn-symbol              "F"
+                                 :print-config-overrides true}}}}
+
+               {:id           "admin-dev"
+                :source-paths ["src/cljs"]
+                :figwheel     {:on-jsload "m-cal.admin/reload"}
+                :compiler     {:main                 m-cal.admin
+                               :optimizations        :none
+                               :output-to            "resources/public/js/admin/admin-app.js"
+                               :output-dir           "resources/public/js/admin/dev"
+                               :asset-path           "js/admin/dev"
                                :source-map-timestamp true
                                :preloads             [devtools.preload]
                     :external-config
