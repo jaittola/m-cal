@@ -160,7 +160,7 @@
     [:a {:href "#"
          :on-click #(set-page-state :event-log)} "Tapahtumaloki"]]
    [:p
-    [:a {:href "/bookings/index"} "Tee uusi varaus"]]])
+    [:a {:href "/"} "Tee uusi varaus"]]])
 
 (defn page [ratom]
   [:div
