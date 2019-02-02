@@ -49,6 +49,7 @@ input, div, p, li, button {
 h1 {
     font-family: @heading_font_family;
     color: @heading_color;
+    margin-top: 5px;
 }
 
 
@@ -105,6 +106,12 @@ button:active {
 .logout_link {
     flex: 0 1 auto;
     -ms-flex: 0 1 auto;
+}
+
+.link_like {
+    color: @heading_color;
+    text-decoration: underline;
+    cursor: pointer;
 }
 
 .blank-element {
@@ -304,4 +311,38 @@ button:active {
     background-color: @calendar_day_color;
     padding-top: 5px;
     padding-bottom: 5px;
+}
+
+.login-fullwidth-container {
+    display: flex;
+    display: -ms-flexbox;
+    flex-flow: row nowrap;
+    -ms-flex-flow: row nowrap;
+    justify-content: center;
+    -ms-justify-content: center;
+}
+
+.login-container {
+    display: flex;
+    display: -ms-flexbox;
+    flex-flow: column nowrap;
+    -ms-flex-flow: column wrap;
+    flex: 0 1 30em;
+    padding: 10px;
+}
+
+.login-password {
+    padding: 3px;
+    margin-bottom: 5px;
+}
+
+.login-button {
+    padding: 3px;
+    margin-bottom: 5px;
+}
+
+.login-status {
+    text-align: center;
+    padding: 3px;
+    margin-bottom: 5px;
 }

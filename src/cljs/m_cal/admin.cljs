@@ -1,10 +1,12 @@
 (ns m-cal.admin
   (:require [reagent.core :as reagent]
+            [reagent.cookies :as cookies]
             [clojure.string :as string]
             [cljs-time.core :as time]
             [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
             [m-cal.utils :as u]
+            [m-cal.login :as login]
             [cljsjs.babel-polyfill])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
@@ -12,12 +14,30 @@
 ;; Vars
 
 (defonce app-state
-  (reagent/atom {:bookings []
+  (reagent/atom {:page-state :bookings
+                 :bookings []
                  :event-log []
                  :error-status nil
                  :success-status nil
                  :first-date nil
-                 :last-date nil}))
+                 :last-date nil
+                 :user-token nil}))
+
+(defn set-user-token [token]
+  (swap! app-state assoc
+         :user-token token))
+
+(defn set-user-token-and-cookie [token]
+  (set-user-token token)
+  (cookies/set! "session" token {:max-age (* 8 3600)
+                                 :path "/"}))
+
+(defn set-user-token-from-cookie []
+  (set-user-token (cookies/get "session")))
+
+(defn clear-user-token-and-cookie []
+  (cookies/remove! "session")
+  (set-user-token nil))
 
 (defn set-calendar-config [config]
   (swap! app-state assoc
@@ -35,52 +55,78 @@
 (defn set-event-log [events]
   (swap! app-state assoc :event-log events))
 
+(defn auth-header [ratom]
+  {"X-Auth-Token" (or (:user-token @ratom) "")})
+
 (defn load-bookings []
-  (go (let [response (<! (http/get "/admin/api/1/all_bookings"))
+  (go (let [response (<! (http/get "/admin/api/1/all_bookings"
+                                   {:headers (auth-header app-state)}))
             status-ok (= (:status response) 200)
+            status-unauthorised (= (:status response) 401)
             body (:body response)
             bookings (when status-ok
                        (:all_bookings body))
             config (when status-ok
                      (:calendar_config body))]
-        (when config
-          (set-calendar-config config))
-        (if bookings
+        (if status-unauthorised
+          (clear-user-token-and-cookie)
           (do
-            (set-error-status nil)
-            (set-bookings bookings))
-          (do
-            (set-bookings [])
-            (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen"))))))
+            (when config
+              (set-calendar-config config))
+            (if bookings
+              (do
+                (set-error-status nil)
+                (set-bookings bookings))
+              (do
+                (set-bookings [])
+                (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen"))))))))
 
 (defn load-event-log []
-  (go (let [response (<! (http/get "/admin/api/1/event_log"))
+  (go (let [response (<! (http/get "/admin/api/1/event_log"
+                                   {:headers (auth-header app-state)}))
             status-ok (= (:status response) 200)
+            status-unauthorised (= (:status response) 401)
             body (:body response)
             events (when status-ok
                      (:events body))]
-        (if events
-          (do
-            (set-error-status nil)
-            (set-event-log events))
-          (do
-            (set-event-log [])
-            (set-error-status "Tapahtumien haku epäonnistui. Yritä myöhemmin uudelleen"))))))
+        (if status-unauthorised
+          (clear-user-token-and-cookie)
+          (if events
+            (do
+              (set-error-status nil)
+              (set-event-log events))
+            (do
+              (set-event-log [])
+              (set-error-status "Tapahtumien haku epäonnistui. Yritä myöhemmin uudelleen")))))))
 
-(defn set-page-state [new-state]
-  (swap! app-state assoc
-         :bookings []
-         :event-log [])
-  (case new-state
+(defn load-data-for-page []
+  (case (:page-state @app-state)
     :bookings (load-bookings)
     :event-log (load-event-log)
     nil))
+
+(defn set-page-state [new-state]
+  (swap! app-state assoc
+         :page-state new-state
+         :bookings []
+         :event-log [])
+  (load-data-for-page))
+
+(defn logout []
+  (let [token (:user-token @app-state)]
+    (clear-user-token-and-cookie)
+    (when token
+      (login/perform-logout-request token))))
+
+(defn successful-login [token]
+  (set-user-token-and-cookie token)
+  (load-data-for-page))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Page layout
 
 (defn booking-update-link [secret-id link-text]
-  [:a {:href (str "/bookings/index?user=" secret-id)} link-text])
+  [:a {:href (str "/?user=" secret-id)} link-text])
 
 (defn booking-update-link-for-booking [booking link-text]
   (let [secret-id (:secret_id booking)]
@@ -163,12 +209,15 @@
     [:a {:href "/"} "Tee uusi varaus"]]])
 
 (defn page [ratom]
-  [:div
-   [page-modes]
-   [u/success_status_area ratom]
-   [u/error_status_area ratom]
-   [render-booking-calendar ratom]
-   [render-event-log ratom]])
+  (if (:user-token @ratom)
+    [:div
+     [page-modes]
+     [u/success_status_area ratom]
+     [u/error_status_area ratom]
+     [render-booking-calendar ratom]
+     [render-event-log ratom]]
+    [:div
+     [login/login-form-for-named-user successful-login]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize App
@@ -185,4 +234,5 @@
 
 (defn ^:export main []
   (dev-setup)
+  (set-user-token-from-cookie)
   (reload))

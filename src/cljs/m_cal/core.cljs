@@ -1,10 +1,12 @@
 (ns m-cal.core
   (:require [reagent.core :as reagent]
+            [reagent.cookies :as cookies]
             [clojure.string :as string]
             [cljs-time.core :as time]
             [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
             [m-cal.utils :as u]
+            [m-cal.login :as login]
             [cemerick.url :refer (url url-encode)]
             [cljsjs.babel-polyfill])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -17,7 +19,8 @@
 (def phone-number-validation-regex #"^((\+([0-9] *){1,3})|0)([0-9] *){6,15}$")
 
 (defonce app-state
-  (reagent/atom {:required_days 2
+  (reagent/atom {:user-token nil
+                 :required_days 2
                  :selected_dates []
                  :name ""
                  :email ""
@@ -67,6 +70,7 @@
 
 (defn clear-user []
   (swap! app-state assoc
+         :user-token nil
          :selected_dates []
          :name ""
          :email ""
@@ -108,6 +112,24 @@
          :last_date (:last_date config)
          :required_days (or (:required_days config) 2)))
 
+(defn set-user-token [token]
+  (swap! app-state assoc
+         :user-token token))
+
+(defn set-user-token-and-cookie [token]
+  (set-user-token token)
+  (cookies/set! "session" token {:max-age (* 8 3600)
+                                 :path "/"}))
+
+(defn set-user-token-from-cookie []
+  (set-user-token (cookies/get "session")))
+
+(defn clear-user-token-and-cookie []
+  (cookies/remove! "session")
+  (clear-user)
+  (clear-statuses)
+  (set-booked-dates []))
+
 (defn simple-input-validation [value]
   (let [string-len (count value)]
     (cond
@@ -141,13 +163,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; HTTP calls to the booking API
 
+(defn auth-header [ratom]
+  {"X-Auth-Token" (:user-token @ratom)})
+
 (defn load-bookings [ratom]
   (go (let [private-id (:user_private_id @ratom)
             request-uri (if private-id
                           (str "/bookings/api/1/bookings/" private-id)
                           "/bookings/api/1/bookings")
-            response (<! (http/get request-uri))
+            response (<! (http/get request-uri
+                                   {:headers (auth-header ratom)}))
             status-ok (= (:status response) 200)
+            status-unauthorised (= (:status response) 401)
             body (:body response)
             bookings (when status-ok
                        (:all_bookings body))
@@ -157,11 +184,13 @@
                    (:user body))
             selected_dates (when status-ok
                              (:selected_dates body))]
-        (if bookings
-          (set-booked-dates bookings)
-          (do
-            (set-booked-dates [])
-            (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen")))
+        (if status-unauthorised
+          (clear-user-token-and-cookie)
+          (if bookings
+            (set-booked-dates bookings)
+            (do
+              (set-booked-dates [])
+              (set-error-status "Varaustietojen lataaminen epäonnistui. Yritä myöhemmin uudelleen"))))
         (when config
           (set-calendar-config config))
         (when (and selected_dates user)
@@ -171,7 +200,9 @@
   (go (do
         (set-request-in-progress true)
         (let [private-id (:user_private_id @ratom)
-              body {:json-params {:name (:name @ratom)
+              body {
+                    :headers (auth-header ratom)
+                    :json-params {:name (:name @ratom)
                                   :email (:email @ratom)
                                   :phone (:phone @ratom)
                                   :yacht_name (:yacht_name @ratom)
@@ -195,8 +226,19 @@
             409 (do
                   (set-selected-dates selected_dates)
                   (set-error-status "Joku muu ehti valita samat päivät kuin sinä. Valitse uudet päivät."))
+            401 (clear-user-token-and-cookie)
             (do
               (set-error-status "Varauksien tallettaminen epäonnistui. Yritä myöhemmin uudelleen.")))))))
+
+(defn logout []
+  (let [token (:user-token @app-state)]
+    (clear-user-token-and-cookie)
+    (when token
+      (login/perform-logout-request token))))
+
+(defn successful-login [token]
+  (set-user-token-and-cookie token)
+  (load-bookings app-state))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Page
@@ -349,25 +391,28 @@
   [:div.logout_header
    [:div.push_right]
    [:div.logout_link
-    [:a {:href "logout"} "Kirjaudu ulos"]]])
+    [:div.link_like {:on-click #(logout)}
+     "Kirjaudu ulos"]]])
 
 (defn page [ratom]
-  [:div
-   [:div.header]
-   [:h1 "Merenkävijät ry"]
-   [:h2 "Särkän vartiovuorojen varaukset"]
-   [instructions]
-   [contact_entry ratom]
-   [selection_area ratom]
-   [selection_button_area ratom]
-   [u/success_status_area ratom]
-   [u/error_status_area ratom]
-   [render-booking-calendar ratom]
-   [footer]])
+  (if (:user-token @ratom)
+    [:div
+     [logout-link]
+     [:h1 "Merenkävijät ry"]
+     [:h2 "Särkän vartiovuorojen varaukset"]
+     [instructions]
+     [contact_entry ratom]
+     [selection_area ratom]
+     [selection_button_area ratom]
+     [u/success_status_area ratom]
+     [u/error_status_area ratom]
+     [render-booking-calendar ratom]
+     [footer]]
+    [:div
+     [login/login-form-for-default-user successful-login]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize App
-
 
 (defn dev-setup []
   (when ^boolean js/goog.DEBUG
@@ -386,4 +431,5 @@
 
 (defn ^:export main []
   (dev-setup)
+  (set-user-token-from-cookie)
   (reload))

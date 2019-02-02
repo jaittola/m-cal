@@ -15,6 +15,7 @@ export FIRST_BOOKING_DATE="2018-09-01"     # First available booking date
 export LAST_BOOKING_DATE="2018-12-31"      # Last available booking date
 export REQUIRED_DAYS=2                     # Number of bookings required
 export BASE_URI_FOR_UPDATES="https://example.com/bookings/index" # URL of the application for update links
+export DEFAULT_USER=the-user               # Username for bookings without specific identity
 ```
 
 Section "Setting up a development database" in this document

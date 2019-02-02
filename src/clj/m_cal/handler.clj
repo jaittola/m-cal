@@ -9,6 +9,7 @@
             [m-cal.bookings :as bookings]
             [m-cal.config :as config]
             [m-cal.email-confirmation-sender :as email-sender]
+            [m-cal.users :as users]
             [m-cal.testing :as testing])
   (:gen-class))
 
@@ -94,6 +95,7 @@
               (middleware/wrap-json-body {:keywords? true})
               (middleware/wrap-json-response))))
     (-> other-routes
+        (middleware/wrap-json-body {:keywords? true})
         (middleware/wrap-json-response))))
 
 (defn setup

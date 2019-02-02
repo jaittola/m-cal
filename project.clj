@@ -3,6 +3,7 @@
                  [org.clojure/clojurescript "1.10.339"]
                  [org.clojure/spec.alpha "0.2.176"]
                  [reagent "0.8.1"]
+                 [reagent-utils "0.3.2"]
                  [com.andrewmcveigh/cljs-time "0.5.2"]
                  [cljs-http "0.1.45"]
                  [ring/ring-core "1.6.3"]

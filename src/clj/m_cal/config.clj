@@ -12,6 +12,9 @@
    :last_date (env :last-booking-date)
    :required_days (required-days)})
 
+(defn default-user []
+  (env :default-user))
+
 (defn sendgrid-email-config []
   {:api-key (env :sendgrid-api-key)
    :disabled (env :email-disabled)})
@@ -34,5 +37,6 @@
               [(env :first-booking-date)
                (env :last-booking-date)
                (required-days)
-               (env :base-uri-for-updates)])
-    (throw (Exception. "You must define environment variables FIRST_BOOKING_DATE, LAST_BOOKING_DATE, REQUIRED_DAYS, and BASE_URI_FOR_UPDATES"))))
+               (env :base-uri-for-updates)
+               (env :default-user)])
+    (throw (Exception. "You must define environment variables FIRST_BOOKING_DATE, LAST_BOOKING_DATE, REQUIRED_DAYS, and BASE_URI_FOR_UPDATES DEFAULT_USER"))))
