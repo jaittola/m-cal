@@ -165,3 +165,38 @@ users CASCADE;
 -- :doc List all users. For testing purposes.
 SELECT *
 FROM users;
+
+-- :name db-check-user-credentials :? :*
+-- :doc Check the username and password of a user and return id, real name and role
+SELECT
+login_id,
+realname,
+role
+FROM
+check_password(:username, :password);
+
+-- :name db-save-token :!
+-- :doc Save a login token into database
+INSERT INTO session (session_token, user_login_id, session_expires)
+VALUES (:token, :user_login_id, now() + CAST(:session_duration AS INTERVAL));
+
+-- :name db-wipe-token :!
+-- :doc Delete token from database
+DELETE FROM session
+WHERE session_token = :token;
+
+-- :name db-fetch-user-for-token :? :*
+-- :doc Fetch user details from database for a valid token
+SELECT
+ul.user_login_id,
+ul.user_login_realname,
+ul.user_login_role
+FROM user_login ul
+NATURAL JOIN session s
+WHERE s.session_token = :token
+AND s.session_expires > now();
+
+-- :name db-clean-up-old-tokens :!
+-- :doc Delete expired tokens from database
+DELETE FROM session
+WHERE session_expires < now();

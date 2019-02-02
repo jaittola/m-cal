@@ -25,4 +25,5 @@ CREATE USER $username;
 CREATE DATABASE $database WITH OWNER $username;
 \c $database;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 EOF

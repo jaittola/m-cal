@@ -4,7 +4,6 @@
             [ring.middleware.json :as middleware]
             [ring.util.response :as resp]
             [ring.adapter.jetty :as jetty]
-            [ring.middleware.basic-authentication :as basicauth]
             [environ.core :refer [env]]
             [m-cal.bookings :as bookings]
             [m-cal.config :as config]
@@ -13,32 +12,15 @@
             [m-cal.testing :as testing])
   (:gen-class))
 
-(defn get-auth-params []
-  (let [user (env :booking-username)
-        password (env :booking-password)
-        realm (env :booking-realm)]
-    (if (and user password realm)
-      {:user user
-       :password password
-       :realm realm}
-      nil)))
-
-(defn basic-authenticate-bookings [auth-params]
-  (fn [user password]
-    (if (and (= user (:user auth-params))
-             (= password (:password auth-params)))
-      {:basic-authentication {:user user
-                              :password password}}
-      nil)))
-
-(defn wrap-basicauth-if-auth-params [handler auth-params]
+(defn wrap-tokenauth-and-require-role [handler accepted-roles]
   (fn [request]
-    (if auth-params
-      (let [auth-req (basicauth/basic-authentication-request request (basic-authenticate-bookings auth-params))]
-        (if (:basic-authentication auth-req)
-          (handler auth-req)
-          (basicauth/authentication-failure (:realm auth-params))))
-      (handler request))))
+    (let [user-role (some-> (get-in request [:headers "x-auth-token"])
+                            (users/check-login)
+                            (:user_login_role))]
+      (if (some #(= user-role %) accepted-roles)
+        (handler request)
+        {:status 401
+         :body {:error_result "Unauthorised. Please log in."}}))))
 
 (defroutes booking-routes
   (GET "/api/1/bookings/:id" [id] (bookings/list-bookings-with-user id))
@@ -82,13 +64,13 @@
   (routes
     (-> (context "/bookings" []
           (-> booking-routes
-              (wrap-basicauth-if-auth-params (get-auth-params))
               (middleware/wrap-json-body {:keywords? true})
+              (wrap-tokenauth-and-require-role ["user" "admin"])
               (middleware/wrap-json-response))))
     (-> (context "/admin" []
           (-> (with-admin-ui admin-routes)
-              (wrap-basicauth-if-auth-params (get-auth-params))
               (middleware/wrap-json-body {:keywords? true})
+              (wrap-tokenauth-and-require-role ["admin"])
               (middleware/wrap-json-response))))
     (-> (context "/test" []
           (-> (in-test-env test-routes)
