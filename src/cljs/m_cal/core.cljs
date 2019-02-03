@@ -304,7 +304,7 @@
         [:input.booking_cancel_button
          {:type "image"
           :on-click #(remove-date-selection day)
-          :src "images/red-x.png"}])]
+          :src "images/red-trash.png"}])]
      [:div.selected_day [u/blank-element]]))
 
 (defn selection_area [ratom]
@@ -385,7 +385,9 @@
    [:div.footer_element
     [:a.footer_link {:href "http://www.merenkavijat.fi/"} "Merenkävijät ry"]]
    [:div.footer_element
-    [:a.footer_link {:href "http://www.merenkavijat.fi/tietosuojaseloste.html"} "Tietosuojaseloste"]]])
+    [:a.footer_link {:href "http://www.merenkavijat.fi/tietosuojaseloste.html"} "Tietosuojaseloste"]]
+   [:div.footer_element
+    [:a.footer_link {:href "https://www.flaticon.com/authors/spovv"} "Lähde joillekin ikoneille"]]])
 
 (defn logout-link []
   [:div.logout_header
