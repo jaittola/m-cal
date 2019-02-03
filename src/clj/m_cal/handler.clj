@@ -54,12 +54,6 @@
       {:status 404}
       (handler req))))
 
-(defn with-admin-ui [handler]
-  (fn [req]
-    (if (not (env :has-admin-ui))
-      {:status 404}
-      (handler req))))
-
 (def app
   (routes
     (-> (context "/bookings" []
@@ -68,7 +62,7 @@
               (wrap-tokenauth-and-require-role ["user" "admin"])
               (middleware/wrap-json-response))))
     (-> (context "/admin" []
-          (-> (with-admin-ui admin-routes)
+          (-> admin-routes
               (middleware/wrap-json-body {:keywords? true})
               (wrap-tokenauth-and-require-role ["admin"])
               (middleware/wrap-json-response))))
