@@ -40,23 +40,39 @@ RETURNING id;
 
 -- :name db-insert-booking-log :<!
 -- :doc Insert a booking log entry into the database
-INSERT INTO booking_log (booked_date,  users_id, booking_id, operation, user_data)
-VALUES (TO_DATE(:booked_date, 'YYYY-MM-DD'), :users_id, :booking_id, :operation, :user_data)
+INSERT INTO booking_log (
+booked_date,
+users_id,
+booking_id,
+operation,
+user_data,
+user_login_id)
+VALUES (
+TO_DATE(:booked_date, 'YYYY-MM-DD'),
+:users_id,
+:booking_id,
+:operation,
+:user_data,
+:user_login_id)
 RETURNING id;
 
 -- :name db-query-eventlog :? :*
 -- :doc List all events in the log
 SELECT
 u.id AS user_id,
+u.secret_id AS user_secret_id,
 log.id AS log_id,
 log.booking_id,
 TO_CHAR(log.booked_date, 'YYYY-MM-DD') AS booked_date,
 TO_CHAR(log.timestamp, 'YYYY-MM-DD"T"HH24:MI:SS') AS event_timestamp,
 log.operation,
 log.user_data,
-u.secret_id AS user_secret_id
+log.user_login_id,
+ul.user_login_username,
+ul.user_login_realname
 FROM booking_log log
-JOIN users u on log.users_id = u.id
+JOIN users u ON log.users_id = u.id
+LEFT JOIN user_login ul ON log.user_login_id = ul.user_login_id
 ORDER BY log.id DESC;
 
 -- :name db-update-user :! :n

@@ -41,7 +41,11 @@
                   (format "//%s%s" host path)
                   (format "//%s:%s%s" host port path))}))))
 
-(defn database-insert-booking-log [connection dates-to-booking-ids user-details op]
+(defn database-insert-booking-log [connection
+                                   dates-to-booking-ids
+                                   user-details
+                                   op
+                                   & [user-login-id]]
   (let [user-data (select-keys user-details [:name :yacht_name :phone :email])]
     (doall (map (fn [id-date]
                   (db-insert-booking-log connection
@@ -49,14 +53,19 @@
                                           :users_id (:id user-details)
                                           :booking_id (:booking_id id-date)
                                           :operation op
-                                          :user_data user-data}))
+                                          :user_data user-data
+                                          :user_login_id user-login-id}))
                 dates-to-booking-ids))))
 
-(defn database-insert-booking-log-without-date [connection user-details op]
+(defn database-insert-booking-log-without-date [connection
+                                                user-details
+                                                op
+                                                & [user-login-id]]
   (let [user-data (select-keys user-details [:name :yacht_name :phone :email])]
     (db-insert-booking-log connection
                            {:booked_date nil
                             :users_id (:id user-details)
                             :booking_id nil
                             :operation op
-                            :user_data user-data})))
+                            :user_data user-data
+                            :user_login_id user-login-id})))

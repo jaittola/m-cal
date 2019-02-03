@@ -7,7 +7,8 @@
             [m-cal.utils :as u]
             [m-cal.login :as login]
             [m-cal.token-utils :as t]
-            [cljsjs.babel-polyfill])
+            [cljsjs.babel-polyfill]
+            [goog.string :as gstring])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -149,9 +150,9 @@
     operation))
 
 (defn render-event-row [event]
-  (let [booked-date (:booked_date event)
-        formatted-booked-date (if booked-date
-                                (u/format-date booked-date)
+  (let [{:keys [booked_date user_login_id user_login_username]} event
+        formatted-booked-date (if booked_date
+                                (u/format-date booked_date)
                                 "")]
     [:tr.event-row
      [:td.event-cell (:event_timestamp event)]
@@ -161,7 +162,14 @@
      [:td.event-cell
       [user-details (:user_data event)]
       [booking-update-link (:user_secret_id event)
-       "Muokkaa käyttäjän tämänhetkisiä varauksia"]]]))
+       "Muokkaa käyttäjän tämänhetkisiä varauksia"]]
+     [:td.event-cell
+      (cond
+        (and user_login_id user_login_username) (gstring/format "%s (%d)"
+                                                                user_login_username
+                                                                user_login_id)
+        user_login_id (str "[user with id] " user_login_id)
+        :else (u/blank-element))]]))
 
 (defn render-event-log [ratom]
   (let [events (:event-log @ratom)]
@@ -175,13 +183,14 @@
           [:th.event-heading "Varattu päivä"]
           [:th.event-heading "Toimenpide"]
           [:th.event-heading "Käyttäjän tunniste"]
-          [:th.event-heading "Käyttäjän tiedot tapahtumassa"]]]
+          [:th.event-heading "Käyttäjän tiedot tapahtumassa"]
+          [:th.event-heading "Muutoksen tekijä"]]]
         [:tbody
          (map (fn [event]
                 ^{:key (str "event-" (:log_id event))}
                 [render-event-row event])
               events)]]]
-      [:div])))
+       [:div])))
 
 (defn page-modes []
   [:div

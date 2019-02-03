@@ -14,19 +14,25 @@
 
 (defn wrap-tokenauth-and-require-role [handler accepted-roles]
   (fn [request]
-    (let [user-role (some-> (get-in request [:headers "x-auth-token"])
-                            (users/check-login)
-                            (:user_login_role))]
+    (let [user-info (some-> (get-in request [:headers "x-auth-token"])
+                            (users/check-login))
+          user-role (:user_login_role user-info)
+          request-with-user-info (if user-info
+                                   (assoc request :user-info user-info)
+                                   request)]
       (if (some #(= user-role %) accepted-roles)
-        (handler request)
+        (handler request-with-user-info)
         {:status 401
          :body {:error_result "Unauthorised. Please log in."}}))))
 
 (defroutes booking-routes
-  (GET "/api/1/bookings/:id" [id] (bookings/list-bookings-with-user id))
+  (GET "/api/1/bookings/:id" [id :as {user-info :user-info}]
+       (bookings/list-bookings-with-user id))
   (GET "/api/1/bookings" [] (bookings/list-bookings))
-  (POST "/api/1/bookings" [:as {body :body}] (bookings/insert-booking body))
-  (PUT "/api/1/bookings/:id" [id :as {body :body}] (bookings/update-booking id body)))
+  (POST "/api/1/bookings" [:as {body :body user-info :user-info}]
+        (bookings/insert-booking body user-info))
+  (PUT "/api/1/bookings/:id" [id :as {body :body user-info :user-info}]
+       (bookings/update-booking id body user-info)))
 
 (defroutes admin-routes
   (GET "/api/1/all_bookings" [] (bookings/admin-list-bookings))

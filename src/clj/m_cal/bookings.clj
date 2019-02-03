@@ -179,7 +179,10 @@
     (if (date-str-less-or-eq booked-date (today))
       (throw (IllegalArgumentException. "date in the past")))))
 
-(defn update-booking-with-validated-params [connection user-with-ids selected_dates]
+(defn update-booking-with-validated-params [connection
+                                            user-with-ids
+                                            selected_dates
+                                            user-login-info]
   (try
     (db-update-user connection
                     user-with-ids)
@@ -196,20 +199,24 @@
                                                           bookings-to-add
                                                           user-with-ids)
           dates-to-inserted-booking-ids (map-dates-to-booking-ids inserted-bookings-ids
-                                                                  bookings-to-add)]
+                                                                  bookings-to-add)
+          user-login-id (:user_login_id user-login-info)]
       (if (not (every? empty? [bookings-to-delete bookings-to-add]))
         (do
           (db-common/database-insert-booking-log connection
                                                  bookings-to-delete
                                                  user-with-ids
-                                                 db-common/log-entry-booking-release)
+                                                 db-common/log-entry-booking-release
+                                                 user-login-id)
           (db-common/database-insert-booking-log connection
                                                  dates-to-inserted-booking-ids
                                                  user-with-ids
-                                                 db-common/log-entry-booking-book))
+                                                 db-common/log-entry-booking-book
+                                                 user-login-id))
         (db-common/database-insert-booking-log-without-date connection
                                                             user-with-ids
-                                                            db-common/log-entry-contact-update))
+                                                            db-common/log-entry-contact-update
+                                                            user-login-id))
       (db-add-to-confirmation-queue connection user-with-ids)
       (success-booking-reply connection
                              user-with-ids
@@ -219,13 +226,14 @@
     (catch IllegalArgumentException e
       (error-reply 400 "trying to modify bookings in the past"))))
 
-(defn insert-booking [params]
+(defn insert-booking [params user-login-info]
   (let [{:keys [user selected_dates validation-error]} (validate-booking-input params)]
     (if validation-error
       (error-reply 400 validation-error)
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
              (assert-bookings-not-in-the-past selected_dates)
              (let [user-id (database-insert-user connection user)
+                   user-login-id (:user_login_id user-login-info)
                    bookings-ids (database-insert-bookings connection
                                                           selected_dates
                                                           user-id)
@@ -235,7 +243,8 @@
                    _ (db-common/database-insert-booking-log connection
                                                             dates-to-booking-ids
                                                             user-details
-                                                            db-common/log-entry-booking-book)]
+                                                            db-common/log-entry-booking-book
+                                                            user-login-id)]
                (db-add-to-confirmation-queue connection user-id)
                (success-booking-reply connection
                                       (user-with-ids-from-user user user-id)
@@ -245,7 +254,7 @@
            (catch IllegalArgumentException e
              (error-reply 400 "Trying to make booking in the past"))))))
 
-(defn update-booking [secret_id params]
+(defn update-booking [secret_id params user-login-info]
   (let [{:keys [user selected_dates validation-error]} (validate-booking-input params)]
     (cond
       validation-error (error-reply 400 validation-error)
@@ -254,9 +263,11 @@
                    (let [user-from-db (first (db-find-user-by-secret-id connection
                                                                         {:secret_id (UUID/fromString secret_id)}))
                          new-user (user-with-ids-from-user user user-from-db)]
-                     (if (nil? user-from-db) (error-reply 400 "No such user")
-                         (update-booking-with-validated-params connection
-                                                               new-user
-                                                               selected_dates))))
+                     (if (nil? user-from-db)
+                       (error-reply 400 "No such user")
+                       (update-booking-with-validated-params connection
+                                                             new-user
+                                                             selected_dates
+                                                             user-login-info))))
                  (catch PSQLException pse
                    (handle-psql-error pse))))))

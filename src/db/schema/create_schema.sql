@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS booking_log (
        timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
        operation SMALLINT NOT NULL
               CONSTRAINT booking_log_operation_check CHECK (operation IN (1, 2, 3, 4, 5)),
-       user_data JSONB
+       user_data JSONB,
+       user_login_id INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS email_confirmation_queue (
