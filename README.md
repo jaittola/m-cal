@@ -14,8 +14,8 @@ export DATABASE_URL="postgresql://mcal@localhost/mcaldb"  # URL of the PostgreSQ
 export FIRST_BOOKING_DATE="2018-09-01"     # First available booking date
 export LAST_BOOKING_DATE="2018-12-31"      # Last available booking date
 export REQUIRED_DAYS=2                     # Number of bookings required
-export BASE_URI_FOR_UPDATES="https://example.com/bookings/index" # URL of the application for update links
-export DEFAULT_USER=the-user               # Username for bookings without specific identity
+export BASE_URI_FOR_UPDATES="https://example.com/" # URL of the application for update links
+export DEFAULT_USER=the-user               # Username for bookings without specific identity (see User accounts below)
 ```
 
 Section "Setting up a development database" in this document
@@ -24,6 +24,49 @@ probably want something more permanent for production use; services
 like Heroku Postgres or Amazon RDS are good choices. If you want to
 set up and manage the database yourself, have a look at PostgreSQL's
 official documentation.
+
+## User accounts
+
+The user interface is protected with usernames and passwords. The
+usernames and passwords are stored in the PostgreSQL database.
+
+The application uses two roles for users:
+
+ - `user` for ordinary users
+ - `admin` for accessing the administrator views at `/booking-admin`
+
+The adminstrator views have a login UI with a username-password
+pair. Hence, you can have several different admin users.
+
+The view for ordinary users, however, obtains the username from the
+DEFAULT_USER environment variable of the server. Hence, all ordinary
+users that make bookings share the same user account. It would not be
+difficult to change this behavior so that every user would have a
+separate account, but at the current stage it has been considered
+simpler to handle the bookings in this way.
+
+The database set-up scripts do not create the users automatically. To
+create an user, log into your PostgreSQL database in which you have
+set up the schema (see 'Setting up a development database' below), and
+issue a SQL statement as follows:
+
+```
+SELECT create_user('[username]', '[password]', '[user real name]', '[role]');
+```
+
+where `[role]` is either `user` or `admin`.
+
+To use this application, you have to create
+
+ - a user with the `user` role and the same username that is configured into the `DEFAULT_USER` environment variable,
+ - and at least one user with the `admin` role
+
+The usernames and credentials are stored in a table called
+`user_login` in the database. TO remove users, simply delete rows in
+this table.
+
+There is currently no password change capability apart from deleting
+and recreating a user.
 
 ### E-mail confirmations
 
@@ -86,29 +129,6 @@ configuration in the SendGrid UI Settings:
 SendGrid may have other relevant settings. Please go through the
 SendGrid configuration UI and make sure that the settings are suitable
 for you.
-
-### HTTP Basic Authentication
-
-You can specify environment variables to protect the user interface
-with HTTP Basic-Auth.
-
-```
-
-# These values are for local testing only
-export BOOKING_USERNAME=user
-export BOOKING_PASSWORD=password
-export BOOKING_REALM="Vartiovuorovaraukset"
-
-# To use these values, you can run
-CONTACT_ADDR="sähköpostitse (test@example.com)." EMAIL_CONFIRMATION_FROM=test@example.com EMAIL_CONFIRMATION_SUBJECT="Vartiovuorovaraukset" DATABASE_URL="postgresql://mcal@localhost/mcaldb" FIRST_BOOKING_DATE="2018-09-01" LAST_BOOKING_DATE="2018-12-31" REQUIRED_DAYS=2 BOOKING_USERNAME=user BOOKING_PASSWORD=password BOOKING_REALM="Varaukset" BASE_URI_FOR_UPDATES="http://localhost:3000/bookings/index" lein ring server-headless
-```
-
-I strongly recommend using the Basic Authentication because otherwise
-the API will be completely open if deployed in the open Internet. The
-authentication can be disabled to help with development work.
-
-A better authentication mechanism than HTTP Basic Authentication
-should be implemented. It just does not exist, yet.
 
 ## Clojure development instructions
 
