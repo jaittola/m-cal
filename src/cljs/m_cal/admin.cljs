@@ -181,36 +181,47 @@
 
 (defn render-event-log [ratom]
   (let [events (:event-log @ratom)]
-    [:div.event-log-area
-     [:h2 "Tapahtumaloki"]
-     [:table.event-log-table
-      [:thead.event-heading-row
-       [:tr
-        [:th.event-heading "Tapahtuman aikaleima"]
-        [:th.event-heading "Varattu päivä"]
-        [:th.event-heading "Toimenpide"]
-        [:th.event-heading "Käyttäjän tunniste"]
-        [:th.event-heading "Käyttäjän tiedot tapahtumassa"]]]
-      [:tbody
-       (map (fn [event]
-              ^{:key (str "event-" (:log_id event))}
-              [render-event-row event])
-            events)]]]))
+    (if (seq events)
+      [:div.event-log-area
+       [:h2 "Tapahtumaloki"]
+       [:table.event-log-table
+        [:thead.event-heading-row
+         [:tr
+          [:th.event-heading "Tapahtuman aikaleima"]
+          [:th.event-heading "Varattu päivä"]
+          [:th.event-heading "Toimenpide"]
+          [:th.event-heading "Käyttäjän tunniste"]
+          [:th.event-heading "Käyttäjän tiedot tapahtumassa"]]]
+        [:tbody
+         (map (fn [event]
+                ^{:key (str "event-" (:log_id event))}
+                [render-event-row event])
+              events)]]]
+      [:div])))
 
 (defn page-modes []
   [:div
    [:p
-    [:a {:href "#"
-         :on-click #(set-page-state :bookings)} "Varaukset"]]
+    [:div.link_like {:on-click #(set-page-state :bookings)}
+     "Varaukset"]]
    [:p
-    [:a {:href "#"
-         :on-click #(set-page-state :event-log)} "Tapahtumaloki"]]
+    [:div.link_like {:on-click #(set-page-state :event-log)}
+     "Tapahtumaloki"]]
    [:p
     [:a {:href "/"} "Tee uusi varaus"]]])
+
+(defn logout-link []
+  [:div.logout_header
+   [:div.push_right]
+   [:div.logout_link
+    [:div.link_like {:on-click #(logout)}
+     "Kirjaudu ulos"]]])
 
 (defn page [ratom]
   (if (:user-token @ratom)
     [:div
+     [logout-link]
+     [:h1 "Varausten hallinta"]
      [page-modes]
      [u/success_status_area ratom]
      [u/error_status_area ratom]
