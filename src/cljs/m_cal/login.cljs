@@ -116,7 +116,7 @@
                            :disabled (or (:failed @login-ui-state)
                                          (:request-in-progress @login-ui-state)
                                          (not (can-login)))
-                           :on-click #(login-for-default-user on-token-receive)}
+                           :on-click #(login-for-named-user on-token-receive)}
      "Kirjaudu sisään"]
     [:div.login-status
      (let [error-state-message (:failed @login-ui-state)
