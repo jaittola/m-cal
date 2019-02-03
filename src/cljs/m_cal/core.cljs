@@ -76,8 +76,11 @@
          :email ""
          :phone ""
          :yacht_name ""
-         :user_private_id nil
          :user_public_id nil))
+
+(defn clear-user-private-id []
+  (swap! app-state assoc
+         :user_private_id nil))
 
 (defn set-user [user selected_dates]
   (swap! app-state assoc
@@ -230,9 +233,14 @@
             (do
               (set-error-status "Varauksien tallettaminen epäonnistui. Yritä myöhemmin uudelleen.")))))))
 
+(defn set-uri-to-root []
+  (js/window.history.replaceState {} "Merenkävijät" "/"))
+
 (defn logout []
   (let [token (:user-token @app-state)]
+    (clear-user-private-id)
     (clear-user-token-and-cookie)
+    (set-uri-to-root)
     (when token
       (login/perform-logout-request token))))
 
