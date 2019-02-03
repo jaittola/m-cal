@@ -1,12 +1,12 @@
 (ns m-cal.admin
   (:require [reagent.core :as reagent]
-            [reagent.cookies :as cookies]
             [clojure.string :as string]
             [cljs-time.core :as time]
             [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
             [m-cal.utils :as u]
             [m-cal.login :as login]
+            [m-cal.token-utils :as t]
             [cljsjs.babel-polyfill])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
@@ -22,22 +22,6 @@
                  :first-date nil
                  :last-date nil
                  :user-token nil}))
-
-(defn set-user-token [token]
-  (swap! app-state assoc
-         :user-token token))
-
-(defn set-user-token-and-cookie [token]
-  (set-user-token token)
-  (cookies/set! "session" token {:max-age (* 8 3600)
-                                 :path "/"}))
-
-(defn set-user-token-from-cookie []
-  (set-user-token (cookies/get "session")))
-
-(defn clear-user-token-and-cookie []
-  (cookies/remove! "session")
-  (set-user-token nil))
 
 (defn set-calendar-config [config]
   (swap! app-state assoc
@@ -56,7 +40,7 @@
   (swap! app-state assoc :event-log events))
 
 (defn auth-header [ratom]
-  {"X-Auth-Token" (or (:user-token @ratom) "")})
+  {"X-Auth-Token" (or (t/get-user-token ratom) "")})
 
 (defn load-bookings []
   (go (let [response (<! (http/get "/admin/api/1/all_bookings"
@@ -69,7 +53,7 @@
             config (when status-ok
                      (:calendar_config body))]
         (if status-unauthorised
-          (clear-user-token-and-cookie)
+          (t/clear-user-token-and-cookie app-state)
           (do
             (when config
               (set-calendar-config config))
@@ -90,7 +74,7 @@
             events (when status-ok
                      (:events body))]
         (if status-unauthorised
-          (clear-user-token-and-cookie)
+          (t/clear-user-token-and-cookie app-state)
           (if events
             (do
               (set-error-status nil)
@@ -113,13 +97,13 @@
   (load-data-for-page))
 
 (defn logout []
-  (let [token (:user-token @app-state)]
-    (clear-user-token-and-cookie)
+  (let [token (t/get-user-token app-state)]
+    (t/clear-user-token-and-cookie app-state)
     (when token
       (login/perform-logout-request token))))
 
 (defn successful-login [token]
-  (set-user-token-and-cookie token)
+  (t/set-user-token-and-cookie app-state token)
   (load-data-for-page))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -201,14 +185,11 @@
 
 (defn page-modes []
   [:div
-   [:p
     [:div.link_like {:on-click #(set-page-state :bookings)}
-     "Varaukset"]]
-   [:p
+     "Varaukset"]
     [:div.link_like {:on-click #(set-page-state :event-log)}
-     "Tapahtumaloki"]]
-   [:p
-    [:a {:href "/"} "Tee uusi varaus"]]])
+     "Tapahtumaloki"]
+    [:a {:href "/"} "Tee uusi varaus"]])
 
 (defn logout-link []
   [:div.logout_header
@@ -218,7 +199,7 @@
      "Kirjaudu ulos"]]])
 
 (defn page [ratom]
-  (if (:user-token @ratom)
+  (if (t/get-user-token ratom)
     [:div
      [logout-link]
      [:h1 "Varausten hallinta"]
@@ -245,5 +226,5 @@
 
 (defn ^:export main []
   (dev-setup)
-  (set-user-token-from-cookie)
+  (t/set-user-token-from-cookie app-state)
   (reload))

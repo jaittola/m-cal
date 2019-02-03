@@ -1,12 +1,12 @@
 (ns m-cal.core
   (:require [reagent.core :as reagent]
-            [reagent.cookies :as cookies]
             [clojure.string :as string]
             [cljs-time.core :as time]
             [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
             [m-cal.utils :as u]
             [m-cal.login :as login]
+            [m-cal.token-utils :as t]
             [cemerick.url :refer (url url-encode)]
             [cljsjs.babel-polyfill])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -70,13 +70,13 @@
 
 (defn clear-user []
   (swap! app-state assoc
-         :user-token nil
          :selected_dates []
          :name ""
          :email ""
          :phone ""
          :yacht_name ""
-         :user_public_id nil))
+         :user_public_id nil)
+  (t/clear-user-token app-state))
 
 (defn clear-user-private-id []
   (swap! app-state assoc
@@ -115,20 +115,8 @@
          :last_date (:last_date config)
          :required_days (or (:required_days config) 2)))
 
-(defn set-user-token [token]
-  (swap! app-state assoc
-         :user-token token))
-
-(defn set-user-token-and-cookie [token]
-  (set-user-token token)
-  (cookies/set! "session" token {:max-age (* 8 3600)
-                                 :path "/"}))
-
-(defn set-user-token-from-cookie []
-  (set-user-token (cookies/get "session")))
-
 (defn clear-user-token-and-cookie []
-  (cookies/remove! "session")
+  (t/clear-cookie)
   (clear-user)
   (clear-statuses)
   (set-booked-dates []))
@@ -167,7 +155,7 @@
 ;; HTTP calls to the booking API
 
 (defn auth-header [ratom]
-  {"X-Auth-Token" (:user-token @ratom)})
+  {"X-Auth-Token" (t/get-user-token ratom)})
 
 (defn load-bookings [ratom]
   (go (let [private-id (:user_private_id @ratom)
@@ -237,7 +225,7 @@
   (js/window.history.replaceState {} "Merenkävijät" "/"))
 
 (defn logout []
-  (let [token (:user-token @app-state)]
+  (let [token (t/get-user-token app-state)]
     (clear-user-private-id)
     (clear-user-token-and-cookie)
     (set-uri-to-root)
@@ -245,7 +233,7 @@
       (login/perform-logout-request token))))
 
 (defn successful-login [token]
-  (set-user-token-and-cookie token)
+  (t/set-user-token-and-cookie app-state token)
   (load-bookings app-state))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -405,7 +393,7 @@
      "Kirjaudu ulos"]]])
 
 (defn page [ratom]
-  (if (:user-token @ratom)
+  (if (t/get-user-token ratom)
     [:div
      [logout-link]
      [:h1 "Merenkävijät ry"]
@@ -441,5 +429,5 @@
 
 (defn ^:export main []
   (dev-setup)
-  (set-user-token-from-cookie)
+  (t/set-user-token-from-cookie app-state)
   (reload))
