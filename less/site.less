@@ -17,14 +17,15 @@
 
 @success_color: #60d360;
 @error_color: #ffcccc;
-@calendar_day_color: #f0f0f0;
-@calendar_day_past_color: #e0e0e0;
+@calendar_day_color: white;
+@calendar_day_past_color: #f5f5f7;
 @calendar_day_past_text_color: #474747;
 @sunday_border_bottom_color: black;
 @day_border_bottom_color: #cfcfcf;
 @heading_color: #1a0dab;
 @disabled_checkbox_color: #e5e5e5;
 @pressed_checkbox_background_color: #b7b7b7;
+@hover_checkbox_background_color: #e7e7e7;
 @enabled_checkbox_background_color: #fefefe;
 @checkbox_box_shadow_color: #020202;
 @disabled_button_text: #a0a0a0;
@@ -221,10 +222,15 @@ button:active {
     width: 30px;
     height: 30px;
     margin: 3px 10px 3px 3px;
+    cursor: pointer;
     background-color: @enabled_checkbox_background_color;
     box-shadow:  0 0 1px @checkbox_box_shadow_color;
     -moz-box-shadow:  0 0 1px @checkbox_box_shadow_color;
     -webkit-box-shadow:  0 0 1px @checkbox_box_shadow_color;
+}
+
+.booking_checkbox:hover {
+    background-color: @hover_checkbox_background_color;
 }
 
 .booking_checkbox:active {
