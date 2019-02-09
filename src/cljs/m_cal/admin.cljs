@@ -196,12 +196,14 @@
   (let [token (t/get-user-token app-state)]
     (when token
       [:div
-       [:div.link_like {:on-click #(set-page-state :bookings)
-                        :tabIndex 0}
-        "Varaukset"]
-       [:div.link_like {:on-click #(set-page-state :event-log)
-                        :tabIndex 0}
-        "Tapahtumaloki"]
+       [:div
+        [:span.link_like {:on-click #(set-page-state :bookings)
+                          :tabIndex 0}
+         "Varaukset"]]
+       [:div
+        [:span.link_like {:on-click #(set-page-state :event-log)
+                         :tabIndex 0}
+         "Tapahtumaloki"]]
        [:form {:action "/export/all-bookings"
                :method "post"}
         [:input {:type "hidden"

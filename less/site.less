@@ -32,6 +32,7 @@
 @button_background: #f5f5f5;
 @button_background_pressed: #c5c5c5;
 @button_border: #d8d8d8;
+@link_like_pressed: red;
 
 html {
     -webkit-text-size-adjust: none;
@@ -113,6 +114,11 @@ button:active {
     color: @heading_color;
     text-decoration: underline;
     cursor: pointer;
+}
+
+.link_like:active {
+    color: @link_like_pressed;
+    outline: none;
 }
 
 .not_button {
