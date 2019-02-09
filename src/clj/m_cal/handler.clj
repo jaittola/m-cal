@@ -41,6 +41,11 @@
                                            request
                                            (get-in request [:params :auth-token]))))
 
+(defn html-file-response [filename]
+  (->
+   (resp/file-response filename)
+   (resp/content-type "text/html")))
+
 (defroutes booking-routes
   (GET "/api/1/bookings/:id" [id]
        (bookings/list-bookings-with-user id))
@@ -58,8 +63,8 @@
   (POST "/all-bookings" [lang] (bookings-export/export-all lang)))
 
 (defroutes other-routes
-  (GET "/" [] (resp/file-response "resources/public/index.html"))
-  (GET "/booking-admin" [] (resp/file-response "resources/public/admin_index.html"))
+  (GET "/" [] (html-file-response "resources/public/index.html"))
+  (GET "/booking-admin" [] (html-file-response "resources/public/admin_index.html"))
   (ANY "/testi" [] (resp/response "Hello, world!"))
   (POST "/api/1/login" [:as {body :body}] (users/login body))
   (POST "/api/1/logout" [:as {body :body}] (users/logout body))
