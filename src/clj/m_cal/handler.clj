@@ -26,7 +26,7 @@
          :body {:error_result "Unauthorised. Please log in."}}))))
 
 (defroutes booking-routes
-  (GET "/api/1/bookings/:id" [id :as {user-info :user-info}]
+  (GET "/api/1/bookings/:id" [id]
        (bookings/list-bookings-with-user id))
   (GET "/api/1/bookings" [] (bookings/list-bookings))
   (POST "/api/1/bookings" [:as {body :body user-info :user-info}]
