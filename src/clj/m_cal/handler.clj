@@ -2,28 +2,44 @@
   (:require [compojure.core :refer :all]
             [compojure.route :as route]
             [ring.middleware.json :as middleware]
+            [ring.middleware.defaults :as ring-defaults]
+            [ring.middleware.params :as ring-params]
+            [ring.middleware.keyword-params :as ring-kw-params]
             [ring.util.response :as resp]
             [ring.adapter.jetty :as jetty]
             [environ.core :refer [env]]
             [m-cal.bookings :as bookings]
+            [m-cal.bookings-export :as bookings-export]
             [m-cal.config :as config]
             [m-cal.email-confirmation-sender :as email-sender]
             [m-cal.users :as users]
             [m-cal.testing :as testing])
   (:gen-class))
 
+(defn authenticate-request-and-require-role [handler accepted-roles request auth-token]
+  (let [user-info (users/check-login auth-token)
+        user-role (:user_login_role user-info)
+        request-with-user-info (if user-info
+                                 (assoc request :user-info user-info)
+                                 request)]
+    (if (some #(= user-role %) accepted-roles)
+      (handler request-with-user-info)
+      {:status 401
+       :body {:error_result "Unauthorised. Please log in."}})))
+
 (defn wrap-tokenauth-and-require-role [handler accepted-roles]
   (fn [request]
-    (let [user-info (some-> (get-in request [:headers "x-auth-token"])
-                            (users/check-login))
-          user-role (:user_login_role user-info)
-          request-with-user-info (if user-info
-                                   (assoc request :user-info user-info)
-                                   request)]
-      (if (some #(= user-role %) accepted-roles)
-        (handler request-with-user-info)
-        {:status 401
-         :body {:error_result "Unauthorised. Please log in."}}))))
+    (authenticate-request-and-require-role handler
+                                           accepted-roles
+                                           request
+                                           (get-in request [:headers "x-auth-token"]))))
+
+(defn wrap-form-token-auth-and-require-role [handler accepted-roles]
+  (fn [request]
+    (authenticate-request-and-require-role handler
+                                           accepted-roles
+                                           request
+                                           (get-in request [:params :auth-token]))))
 
 (defroutes booking-routes
   (GET "/api/1/bookings/:id" [id]
@@ -37,6 +53,9 @@
 (defroutes admin-routes
   (GET "/api/1/all_bookings" [] (bookings/admin-list-bookings))
   (GET "/api/1/event_log" [] (bookings/admin-list-eventlog)))
+
+(defroutes export-routes
+  (POST "/all-bookings" [lang] (bookings-export/export-all lang)))
 
 (defroutes other-routes
   (GET "/" [] (resp/file-response "resources/public/index.html"))
@@ -72,6 +91,12 @@
               (middleware/wrap-json-body {:keywords? true})
               (wrap-tokenauth-and-require-role ["admin"])
               (middleware/wrap-json-response))))
+    (-> (context "/export" []
+                 (-> export-routes
+                     (wrap-form-token-auth-and-require-role ["admin"])
+                     (ring-kw-params/wrap-keyword-params)
+                     (ring-params/wrap-params)
+                     (middleware/wrap-json-response))))
     (-> (context "/test" []
           (-> (in-test-env test-routes)
               (middleware/wrap-json-body {:keywords? true})

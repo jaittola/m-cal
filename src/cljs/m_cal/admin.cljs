@@ -193,12 +193,27 @@
        [:div])))
 
 (defn page-modes []
-  [:div
-    [:div.link_like {:on-click #(set-page-state :bookings)}
-     "Varaukset"]
-    [:div.link_like {:on-click #(set-page-state :event-log)}
-     "Tapahtumaloki"]
-    [:a {:href "/"} "Tee uusi varaus"]])
+  (let [token (t/get-user-token app-state)]
+    (when token
+      [:div
+       [:div.link_like {:on-click #(set-page-state :bookings)
+                        :tabIndex 0}
+        "Varaukset"]
+       [:div.link_like {:on-click #(set-page-state :event-log)
+                        :tabIndex 0}
+        "Tapahtumaloki"]
+       [:form {:action "/export/all-bookings"
+               :method "post"}
+        [:input {:type "hidden"
+                 :name "lang"
+                 :value "fi"}]
+        [:input {:type "hidden"
+                 :name "auth-token"
+                 :value token}]
+        [:button {:type "submit"
+                  :class "not_button link_like"}
+         "Kaikki varaukset Excel-tiedostona"]]
+       [:a {:href "/"} "Tee uusi varaus"]])))
 
 (defn logout-link []
   [:div.logout_header
