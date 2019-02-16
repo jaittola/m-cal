@@ -176,6 +176,8 @@ TRUNCATE TABLE
 booking;
 TRUNCATE TABLE
 users CASCADE;
+TRUNCATE TABLE
+session;
 
 -- :name db-get-all-users :? :*
 -- :doc List all users. For testing purposes.
