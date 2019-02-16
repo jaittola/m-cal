@@ -9,9 +9,6 @@ if [ -z "$conninfo" ] ; then
     exit 1
 fi
 
-psql "$conninfo" <<EOF
-SELECT create_user('the-user', 'usersecret', 'Test user', 'user');
-SELECT create_user('admin', 'adminsecret', 'Test admin', 'admin');
-EOF
+psql "$conninfo" -f "${dir-.}/../schema/create_test_users.sql"
 
 

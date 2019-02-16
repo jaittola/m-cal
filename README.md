@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/jaittola/m-cal.svg?branch=master)](https://travis-ci.org/jaittola/m-cal)
+
 # m-cal
 
 This application provides a simple booking service for a yacht club's
