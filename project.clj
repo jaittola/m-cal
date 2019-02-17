@@ -48,7 +48,8 @@
   :profiles {:dev
              {:dependencies [[figwheel-sidecar "0.5.18"]
                              [binaryage/devtools "0.9.10"]
-                             [cider/piggieback "0.3.10"]]
+                             [cider/piggieback "0.3.10"]
+                             [ring/ring-mock "0.3.2"]]
               :plugins      [[lein-figwheel "0.5.18"]
                              [cider/cider-nrepl "0.18.0"]]}
 

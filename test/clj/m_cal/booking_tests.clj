@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [m-cal.test-utils :as test-utils]))
 
+(use-fixtures :once test-utils/setup-handler-config-fixture)
 (use-fixtures :each test-utils/reset-db-fixture)
 
 (def test-user "the-user")

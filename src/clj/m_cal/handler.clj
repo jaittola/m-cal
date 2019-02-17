@@ -115,8 +115,8 @@
   (config/verify-config)
   (when (nil? (env :database-url))
     (throw (Error. "You must define the database URI in environment variable DATABASE_URL")))
-    (email-sender/send-email-confirmations)
-  )
+  (when (nil? (env :testing))
+    (email-sender/send-email-confirmations)))
 
 (defn -main [& [port]]
   (setup)
