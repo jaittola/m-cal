@@ -8,8 +8,9 @@ Varaajan nimi: [name]
 Varaajan sähköpostiosoite: [email]
 Veneen nimi: [yacht_name]
 
-Voit käydä muuttamassa vartiovuoroja tai jättämiäsi yhteystietoja osoitteessa
-[update_link].
+Voit käydä muuttamassa vartiovuoroja tai jättämiäsi yhteystietoja
+osoitteessa [update_link]. Tämä linkki on sinulle
+henkilökohtainen. Älä jaa sitä muille.
 
 Jos haluat lisätietoja tai vartiovuoroissa on muuten epäselvyyksiä,
 ota yhteyttä [contact]
