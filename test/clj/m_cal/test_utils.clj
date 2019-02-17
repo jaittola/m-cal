@@ -12,29 +12,40 @@
   (clean-up-db)
   (f))
 
-(defn headers-with-optional-auth
-  [headers user-token]
-  (if user-token
-    (assoc headers "X-Auth-Token" user-token)
-    headers))
+(defn ?assoc
+  "Same as assoc, but skip the assoc if v is nil"
+  [m & kvs]
+  (->> kvs
+    (partition 2)
+    (filter second)
+    (map vec)
+    (into m)))
+
+(defn get-headers
+  [& [token]]
+  (?assoc {} "X-Auth-Token" token))
+
+(defn post-headers
+  [& [token]]
+  (?assoc {"Content-Type" "application/json"}
+          "X-Auth-Token" token))
 
 (defn login
   [username password]
   (-> (client/post "http://localhost:3000/api/1/login"
                    {:body (json-str {"username" username
                                      "password" password})
-                    :headers {"Content-Type" "application/json"}})
+                    :headers (post-headers)})
       :body
       (read-str :key-fn keyword)
       :token))
 
 (defn add-test-booking
   [booking & [user-token]]
-    (client/post "http://localhost:3000/bookings/api/1/bookings"
-                   {:throw-exceptions false
-                    :body (json-str booking)
-                    :headers (headers-with-optional-auth {"Content-Type" "application/json"}
-                                                         user-token)}))
+  (client/post "http://localhost:3000/bookings/api/1/bookings"
+               {:throw-exceptions false
+                :body (json-str booking)
+                :headers (post-headers user-token)}))
 
 (defn add-test-booking-successfully
   [booking user-token]
@@ -46,21 +57,21 @@
   [booking]
   (client/post "http://localhost:3000/test/testBookings"
                {:body (json-str booking)
-                :headers {"Content-Type" "application/json"}}))
+                :headers (post-headers)}))
 
 (defn get-all-bookings-admin
   "Get all bookings using the admin API and return the complete reply"
   [& [admin-token]]
   (client/get "http://localhost:3000/admin/api/1/all_bookings"
               {:throw-exceptions false
-               :headers (headers-with-optional-auth {} admin-token)}))
+               :headers (get-headers admin-token)}))
 
 (defn get-all-bookings
   "Get all bookings and return the complete reply"
   [& [user-token]]
   (client/get "http://localhost:3000/bookings/api/1/bookings"
               {:throw-exceptions false
-               :headers (headers-with-optional-auth {} user-token)}))
+               :headers (get-headers user-token)}))
 
 (defn get-all-booking-values
   "Underscores, argh"
@@ -83,8 +94,7 @@
   (client/put (str "http://localhost:3000/bookings/api/1/bookings/" secret-id)
               {:throw-exceptions false
                :body (json-str booking)
-               :headers (headers-with-optional-auth {"Content-Type" "application/json"}
-                                                    user-token)}))
+               :headers (post-headers user-token)}))
 
 (defn update-booking-successfully
   [secret-id booking user-token]
