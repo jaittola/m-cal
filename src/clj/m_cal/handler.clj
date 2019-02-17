@@ -71,19 +71,6 @@
   (route/resources "/")
   (route/not-found "Not Found"))
 
-(defroutes test-routes
-  (POST "/reset" [] (do (testing/reset-db)
-                      {:status 200 :body "ok"}))
-  (GET "/user/:name" [name] {:status 200 :body {:user (testing/get-user name)}})
-  (POST "/testBookings" [:as {body :body}] (testing/insert-booking-unchecked body))
-  (route/not-found "Not Found"))
-
-(defn in-test-env [handler]
-  (fn [req]
-    (if (not (env :testing))
-      {:status 404}
-      (handler req))))
-
 (def app
   (routes
     (-> (context "/bookings" []
@@ -102,10 +89,6 @@
                      (ring-kw-params/wrap-keyword-params)
                      (ring-params/wrap-params)
                      (middleware/wrap-json-response))))
-    (-> (context "/test" []
-          (-> (in-test-env test-routes)
-              (middleware/wrap-json-body {:keywords? true})
-              (middleware/wrap-json-response))))
     (-> other-routes
         (middleware/wrap-json-body {:keywords? true})
         (middleware/wrap-json-response))))

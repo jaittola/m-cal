@@ -25,5 +25,4 @@
                                                    user)]
         (bookings/database-insert-bookings connection
                                            selected_dates
-                                  user-id)
-        {:status 200 :body "ok"}))))
+                                  user-id)))))

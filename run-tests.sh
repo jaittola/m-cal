@@ -10,4 +10,4 @@ export DEFAULT_USER=the-user
 export TESTING_DATE=2019-03-02
 export TESTING=true
 
-lein test
+lein test "$@"

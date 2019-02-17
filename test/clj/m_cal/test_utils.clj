@@ -3,6 +3,7 @@
             [clojure.data.json :refer [json-str read-str]]
             [ring.mock.request :as mock]
             [m-cal.handler :as handler]
+            [m-cal.testing :as mcal-testing]
             [cemerick.url :refer [url-encode]]))
 
 (defn http-req [url method & [body token]]
@@ -28,7 +29,7 @@
   (http-req url :put body token))
 
 (defn clean-up-db []
-  (http-post "/test/reset"))
+  (mcal-testing/reset-db))
 
 (defn reset-db-fixture
   "clean test DB before running test. Note: does not clean up after each test is run, only before each test."
@@ -74,8 +75,12 @@
 
 (defn add-test-booking-unchecked
   [booking]
-  (http-post "/test/testBookings"
-             booking))
+  (mcal-testing/insert-booking-unchecked booking))
+
+(defn get-secret-id
+  [name]
+  (-> (mcal-testing/get-user name)
+      :secret_id))
 
 (defn get-all-bookings-admin
   "Get all bookings using the admin API and return the complete reply"
@@ -96,14 +101,6 @@
       :body
       (read-str :key-fn keyword)
       :all_bookings))
-
-(defn get-secret-id
-  [name]
-  (-> (http-get (str "/test/user/" (url-encode name)))
-      :body
-      (read-str :key-fn keyword)
-      :user
-      :secret_id))
 
 (defn update-booking
   [secret-id booking & [user-token]]
