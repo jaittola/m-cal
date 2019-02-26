@@ -114,10 +114,32 @@ phone
 FROM users u
 WHERE secret_id = :secret_id;
 
+-- :name db-find-user-by-id :? :*
+-- :doc "Find user by sequential id. Return data compatiable with UserWithIDs records.
+SELECT
+id,
+secret_id,
+username AS name,
+yachtname AS yacht_name,
+email,
+phone
+FROM users u
+WHERE id = :id;
+
 -- :name db-delete-booking :! :n
 -- :doc Delete bookings from database
 DELETE FROM booking
 WHERE id in (:v*:ids);
+
+-- :name db-find-booking-by-id-for-update :? :*
+-- :doc Find booking by id
+SELECT
+id AS booking_id,
+TO_CHAR(booked_date, 'YYYY-MM-DD') AS booked_date,
+users_id
+FROM booking
+WHERE id = :id
+FOR UPDATE;
 
 -- :name db-add-to-confirmation-queue :!
 -- :doc Add an entry for sending an e-mail confirmation.

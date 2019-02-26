@@ -168,3 +168,29 @@
                                            :phone "0501234"
                                            :selected_dates ["2019-02-02" "2019-01-31"]}
                                           token)))
+
+(deftest admin-del-booking
+  (let [admin-token (admin-login)
+        [booking1 booking2] (test-utils/add-test-booking-unchecked {:name "Tom Anderson"
+                                                                    :yacht_name "s/y Meriruoho"
+                                                                    :email "tom@example.com"
+                                                                    :phone "0412222114424"
+                                                                    :selected_dates ["2019-02-02" "2019-04-13"]})
+        del-response (test-utils/delete-booking-admin (:id booking1) admin-token)
+        bookings-after-delete (test-utils/get-all-booking-values admin-token)
+        b1 (first bookings-after-delete)]
+    (is (= 200 (:status del-response)))
+    (is (= 1 (count bookings-after-delete)))
+    (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2019-04-13"} b1))))
+
+(deftest admin-del-booking-not-available-with-user-token
+  (let [user-token (user-login)
+        [booking1 booking2] (test-utils/add-test-booking-unchecked {:name "Tom Anderson"
+                                                                    :yacht_name "s/y Meriruoho"
+                                                                    :email "tom@example.com"
+                                                                    :phone "0412222114424"
+                                                                    :selected_dates ["2019-02-02" "2019-04-13"]})
+        del-response (test-utils/delete-booking-admin (:id booking1) user-token)
+        bookings-after-delete (test-utils/get-all-booking-values user-token)]
+    (is (= 401 (:status del-response)))
+    (is (= 2 (count bookings-after-delete)))))

@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS booking_log (
        booked_date DATE,
        timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
        operation SMALLINT NOT NULL
-              CONSTRAINT booking_log_operation_check CHECK (operation IN (1, 2, 3, 4, 5)),
+              CONSTRAINT booking_log_operation_check CHECK (operation IN (1, 2, 3, 4, 5, 6)),
        user_data JSONB,
        user_login_id INTEGER
 );

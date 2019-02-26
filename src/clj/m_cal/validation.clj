@@ -4,6 +4,14 @@
 ;; Validator is a function that returns validated and possibly transformed input.
 ;; Errors are signalled by returning key ::validation-error
 
+(defn spec-validator-simple
+  "Returns original input if it matches spec or nil otherwise"
+  [spec]
+  (fn [input]
+    (if (s/valid? spec input)
+      input
+      nil)))
+
 (defn spec-validator
   "Returns a validator that returns spec-validated input or ::validation-error"
   [spec]

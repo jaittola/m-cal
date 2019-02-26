@@ -142,6 +142,7 @@
 (def local-date-string-regex #"[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]") ; just a format check
 (def phone-number-string-regex #"^((\+([0-9] *){1,3})|0)([0-9)(] *){6,20}$")
 
+(s/def ::is-integer #(re-matches #"^[0-9]+$" (str %)))
 (s/def ::name (string-of-at-least 5))
 (s/def ::yacht_name (string-of-at-least 5))
 (s/def ::email (s/and (string-of-at-least 5)
@@ -153,6 +154,7 @@
 (s/def ::selected_dates (s/tuple ::local-date ::local-date))
 (s/def ::booking (s/keys :req-un [::name ::yacht_name ::email ::phone ::selected_dates]))
 
+(def int-validator (validation/spec-validator-simple ::is-integer))
 (def booking-spec-validator (validation/spec-validator ::booking))
 (def booking-date-parser-validator (validation/assert-validator
                                      (fn [params]
@@ -172,6 +174,11 @@
         {:keys [selected_dates :m-cal.validation/validation-error]} validation-result
         user (map->User validation-result)]
     (->BookingValidation user selected_dates validation-error)))
+
+(defn validate-int [input-int]
+  (some-> input-int
+          int-validator
+          Integer.))
 
 (defn assert-bookings-not-in-the-past
   [bookings]
@@ -226,6 +233,28 @@
     (catch IllegalArgumentException e
       (error-reply 400 "trying to modify bookings in the past"))))
 
+(defn admin-del-booking-with-validated-id [id user-login-info]
+  (try (jdbc/with-db-transaction [connection @db-common/dbspec]
+         (let [user-login-id (:user_login_id user-login-info)
+               booking (first (db-find-booking-by-id-for-update connection
+                                                                {:id id}))
+               user-id (:users_id booking)
+               user-with-ids (when user-id
+                               (first (db-find-user-by-id connection {:id user-id})))]
+           (if (and booking user-with-ids)
+             (do
+               (db-delete-booking connection {:ids [id]})
+               (db-common/database-insert-booking-log connection
+                                                      [booking]
+                                                      user-with-ids
+                                                      db-common/log-entry-admin-booking-delete
+                                                      user-login-id)
+               {:status 200
+                :body {:all_bookings (db-list-all-bookings-for-admin connection)}})
+             {:status 404})))
+       (catch PSQLException pse
+         (handle-psql-error pse))))
+
 (defn insert-booking [params user-login-info]
   (let [{:keys [user selected_dates validation-error]} (validate-booking-input params)]
     (if validation-error
@@ -271,3 +300,11 @@
                                                              user-login-info))))
                  (catch PSQLException pse
                    (handle-psql-error pse))))))
+
+(defn admin-del-booking [id user-login-info]
+  (let [user-login-id (:user_login_id user-login-info)
+        validated-id (validate-int id)]
+    (if (nil? validated-id)
+      (error-reply 400 "Invalid booking id")
+      (admin-del-booking-with-validated-id validated-id user-login-info))))
+

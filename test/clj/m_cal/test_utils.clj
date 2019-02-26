@@ -28,6 +28,11 @@
   [url & [body token]]
   (http-req url :put body token))
 
+(defn http-delete
+  "Perform an HTTP delete request using the Ring Mock"
+  [url & [token]]
+  (http-req url :delete nil token))
+
 (defn clean-up-db []
   (mcal-testing/reset-db))
 
@@ -87,6 +92,12 @@
   [& [admin-token]]
   (http-get "/admin/api/1/all_bookings"
             admin-token))
+
+(defn delete-booking-admin
+  "Delete booking via an admin-only delete interface"
+  [id & [admin-token]]
+  (http-delete (str "/admin/api/1/booking/" id)
+               admin-token))
 
 (defn get-all-bookings
   "Get all bookings and return the complete reply"

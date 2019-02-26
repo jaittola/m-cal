@@ -147,6 +147,7 @@
     3 "Vahvistussähköpostin lähetys"
     4 "Vahvistussähköpostin lähetys (sähköposti ei käytössä)"
     5 "Käyttäjän tietojen päivitys"
+    6 "Varauksen poisto ylläpidon toimesta"
     operation))
 
 (defn render-event-row [event]

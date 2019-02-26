@@ -57,7 +57,9 @@
 
 (defroutes admin-routes
   (GET "/api/1/all_bookings" [] (bookings/admin-list-bookings))
-  (GET "/api/1/event_log" [] (bookings/admin-list-eventlog)))
+  (GET "/api/1/event_log" [] (bookings/admin-list-eventlog))
+  (DELETE "/api/1/booking/:id" [id :as {user-info :user-info}]
+          (bookings/admin-del-booking id user-info)))
 
 (defroutes export-routes
   (POST "/all-bookings" [lang] (bookings-export/export-all lang)))
