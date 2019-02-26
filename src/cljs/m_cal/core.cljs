@@ -249,16 +249,19 @@
   [:div.instruction_area
    [:h3 "Huomioitavaa"]
    [:ul
-    [:li "Kaikilla Särkällä veneitä pitävillä on velvollisuus toimia yövartijana Särkällä kahtena yönä purjehduskauden aikana."]
-    [:li "Varatun vartiovuoron laiminlyönnistä laskutetaan voimassa olevan hinnaston mukainen maksu."]
-    [:li "Vuorovarauksia on mahdollisuus vaihtaa ennen
-   vartiointipäivää. Varauksien muuttamista juuri ennen vartiovuoroa
-   on kuitenkin syytä välttää, jottei Särkkä jää ilman
-   vartijaa. Toimiva vartiointi Särkällä on kuitenkin kaikkien
-   veneenomistajien etujen mukaista ja estää mm. myrskyvahinkoja."]]
+    [:li "Kaikilla Särkällä veneitä pitävillä on velvollisuus toimia "
+    "yövartijana Särkällä kahtena yönä purjehduskauden aikana."]
+    [:li "Varatun vartiovuoron laiminlyönnistä laskutetaan voimassa "
+     "olevan hinnaston mukainen maksu."]
+    [:li "Vuorovarauksia on mahdollisuus muuttaa ennen "
+     "vartiointipäivää. Muutoksia juuri ennen vartiovuoroa "
+     "on syytä välttää, jottei Särkkä jää ilman vartijaa. "
+     "Toimiva vartiointi Särkällä on kaikkien veneenomistajien "
+     "etujen mukaista ja estää mm. myrskyvahinkoja."]]
    [:h3 "Toimi näin"]
    [:ol
-    [:li.instruction "Syötä nimesi, veneesi nimi ja yhteystietosi allaoleviin kenttiin. Yhteystiedot eivät näy varauslistassa."]
+    [:li.instruction "Syötä nimesi, veneesi nimi ja yhteystietosi "
+     "allaoleviin kenttiin. Yhteystietoja ei julkaista varauslistassa."]
     [:li.instruction "Valitse kaksi vapaata vartiovuoroa."]
     [:li.instruction "Paina \"Varaa valitsemasi vuorot\" -nappia."]
     [:li.instruction "Varausjärjestelmä lähettää sähköpostitse vahvistuksen "
