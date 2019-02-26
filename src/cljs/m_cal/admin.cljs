@@ -22,7 +22,8 @@
                  :success-status nil
                  :first-date nil
                  :last-date nil
-                 :user-token nil}))
+                 :user-token nil
+                 :unconfirmed-booking-delete nil}))
 
 (defn set-calendar-config [config]
   (swap! app-state assoc
@@ -39,6 +40,9 @@
 
 (defn set-event-log [events]
   (swap! app-state assoc :event-log events))
+
+(defn set-unconfirmed-delete [to-delete]
+  (swap! app-state assoc :unconfirmed-booking-delete to-delete))
 
 (defn auth-header [ratom]
   {"X-Auth-Token" (or (t/get-user-token ratom) "")})
@@ -84,6 +88,20 @@
               (set-event-log [])
               (set-error-status "Tapahtumien haku epäonnistui. Yritä myöhemmin uudelleen")))))))
 
+(defn delete-booking [id]
+  (go (let [response (<! (http/delete (str "/admin/api/1/booking/" id)
+                                      {:headers (auth-header app-state)}))
+            status-ok (= (:status response) 200)
+            bookings (when status-ok
+                       (:all_bookings (:body response)))]
+        (if status-ok
+          (do
+            (set-unconfirmed-delete nil)
+            (set-error-status nil)
+            (set-bookings bookings))
+          (do
+            (set-error-status "Varauksen poisto epäonnistui."))))))
+
 (defn load-data-for-page []
   (case (:page-state @app-state)
     :bookings (load-bookings)
@@ -94,7 +112,8 @@
   (swap! app-state assoc
          :page-state new-state
          :bookings []
-         :event-log [])
+         :event-log []
+         :unconfirmed-booking-delete nil)
   (load-data-for-page))
 
 (defn logout []
@@ -117,6 +136,18 @@
   (let [secret-id (:secret_id booking)]
     (booking-update-link secret-id link-text)))
 
+(defn booking-delete-link [booking link-text]
+  (let [confirm-params {:id (:id booking)
+                        :date (:booked_date booking)}]
+    [:div.link_like
+     {:on-click #(set-unconfirmed-delete confirm-params)}
+     link-text]))
+
+(defn booking-delete-confirmation-link [id link-text]
+  [:div.link_like
+   {:on-click #(delete-booking id)}
+   link-text])
+
 (defn user-details [userdata]
   [:div
    (:name userdata) [:br]
@@ -125,11 +156,18 @@
    (:email userdata) [:br]])
 
 (defn booking-or-free [today daydata ratom] ""
-  (let [booking (:booking daydata)]
+  (let [booking (:booking daydata)
+        unconfirmed-del (:unconfirmed-booking-delete @ratom)
+        unconfirmed-del-id (:id unconfirmed-del)
+        unconfirmed-del-date (:date unconfirmed-del)
+        this-day-del-confirmation (= (:booked_date booking) unconfirmed-del-date)]
     (if booking
       [:div
        [user-details booking]
-       [booking-update-link-for-booking booking "Muokkaa"]]
+       [booking-update-link-for-booking booking "Muokkaa"]
+       [booking-delete-link booking "Poista"]
+       (when this-day-del-confirmation
+         [booking-delete-confirmation-link unconfirmed-del-id "Oletko varma?"])]
       [u/blank-element])))
 
 (defn render-booking-calendar [ratom]
