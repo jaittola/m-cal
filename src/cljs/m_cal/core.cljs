@@ -347,45 +347,65 @@
 (defn my-details-for-booking [ratom]
   [:div (:name @ratom) [:br] (:yacht_name @ratom)])
 
-(defn day-details-chosen-cancellable [isoday]
+(defn day-details-chosen-cancellable []
   [:input.booking_checkbox
    {:type "image"
-    :on-click #(remove-date-selection isoday)
     :src "images/blue-checkmark.png"}])
 
-(defn day-details-bookable [isoday]
-  [:div.booking_checkbox
-   {:on-click #(add-date-selection isoday)}])
+(defn day-details-bookable []
+  [:div.booking_checkbox])
 
 (defn day-details-free-but-not-bookable []
   [:div.booking_checkbox_appear_disabled
    {:disabled true}])
 
-(defn calendar-cell-booked-for-me [isoday ratom]
+(defn calendar-cell-booked-for-me [ratom]
   [:div.calendar-booked-content-cell
-   [day-details-chosen-cancellable isoday]
+   [day-details-chosen-cancellable]
    [my-details-for-booking ratom]])
+
+(defn is-in-future? [day today]
+  (time/after? (:date day) today))
+
+(defn is-booked-for-me? [day]
+  (let [isoday (:isoformat day)]
+    (some #(== % isoday) (:selected_dates @app-state))))
+
+(defn has-required-bookings? []
+  (>= (count (:selected_dates @app-state)) (:required_days @app-state)))
 
 (defn booking-or-free [today daydata ratom] ""
   (let [booking (:booking daydata)
-        isoday (:isoformat (:day daydata))
-        theday (:date (:day daydata))
-        is-in-future (time/after? theday today)
-        is-booked-for-me (some #(== % isoday) (:selected_dates @ratom))
-        has-required-bookings (>= (count (:selected_dates @ratom)) (:required_days @ratom))]
+        day (:day daydata)
+        isoday (:isoformat day)
+        day-is-in-future (is-in-future? day today)
+        is-booked-for-me (is-booked-for-me? day)]
     (cond
-      (and is-booked-for-me is-in-future) [calendar-cell-booked-for-me isoday ratom]
-      (and is-booked-for-me (not is-in-future)) [booking-details booking]
+      (and is-booked-for-me day-is-in-future) [calendar-cell-booked-for-me ratom]
+      (and is-booked-for-me (not day-is-in-future)) [booking-details booking]
       (and booking (not (= (:user_id booking) (:user_public_id @ratom)))) [booking-details booking]
-      (and (nil? booking) (not is-in-future)) u/blank-element
-      has-required-bookings [day-details-free-but-not-bookable]
-      :else [day-details-bookable isoday])))
+      (and (nil? booking) (not day-is-in-future)) u/blank-element
+      (has-required-bookings?) [day-details-free-but-not-bookable]
+      :else [day-details-bookable])))
+
+(defn cell-click-handler [daydata today]
+  (let [booking (:booking daydata)
+        day (:day daydata)
+        isoday (:isoformat day)
+        day-is-in-future (is-in-future? day today)
+        is-booked-for-me (is-booked-for-me? day)]
+    (when day-is-in-future
+      (cond
+        is-booked-for-me (remove-date-selection isoday)
+        (and (not (has-required-bookings?))
+             (or (nil? booking)
+                 (= (:user_id booking) (:user_public_id @app-state)))) (add-date-selection isoday)))))
 
 (defn render-booking-calendar [ratom]
   (let [bookings (:booked_dates @ratom)
         first-date (:first_date @ratom)
         last-date (:last_date @ratom)]
-    [u/render-calendar ratom first-date last-date bookings booking-or-free]))
+    [u/render-calendar ratom first-date last-date bookings booking-or-free cell-click-handler]))
 
 (defn footer []
   [:div.footer
