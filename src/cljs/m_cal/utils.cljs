@@ -74,22 +74,22 @@
 (defn find-booking-for [bookings day]
   (first (filter #(== (:isoformat day) (:booked_date %)) bookings)))
 
-(defn render-day [daydata today ratom render-booking-details]
+(defn render-day [daydata today ratom render-booking-details cell-on-click]
   (let [day (:day daydata)
-        thedate (:date (:day daydata))
+        thedate (:date day)
         is-in-past (time/before? thedate today)
         booking (:booking daydata)
         classes (string/join " " (filter some?
                                          ["calendar-day"
                                           (when (== 7 (:weekday day)) "calendar-sunday")
                                           (when is-in-past "calendar-day-past")]))]
-    [:tr
+    [:tr {:on-click #(when cell-on-click (cell-on-click daydata today))}
      [:td {:class (str "calendar-date-cell " classes)}
       (:formatted-date day)]
      [:td {:class (str "calendar-booking-cell " classes)}
       [render-booking-details today daydata ratom]]]))
 
-(defn render-month [{:keys [monthname days]} booked-dates today ratom render-booking-details]
+(defn render-month [{:keys [monthname days]} booked-dates today ratom render-booking-details cell-on-click]
   [:div.calendar-month
    [:h4 monthname]
    [:table.calendar-month-table
@@ -104,10 +104,11 @@
                                          daydata
                                          today
                                          ratom
-                                         render-booking-details]))
+                                         render-booking-details
+                                         cell-on-click]))
           (doall))]]])
 
-(defn render-calendar [ratom first-date last-date bookings render-booking-details]
+(defn render-calendar [ratom first-date last-date bookings render-booking-details & [cell-on-click]]
   (let [today (time/now)]
     [:div.calendar-area
      [:h2 "Varauskalenteri"]
@@ -116,6 +117,6 @@
         (->> (make-calendar-seq-memo first-date last-date)
              (map (fn [month]
                     ^{:key (str "month-" (:monthname month))}
-                    [render-month month bookings today ratom render-booking-details]))
+                    [render-month month bookings today ratom render-booking-details cell-on-click]))
              (doall))])]))
 
