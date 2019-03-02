@@ -1,5 +1,5 @@
 (ns m-cal.util
-  (:require [environ.core :refer [env]]
+  (:require [m-cal.config :as c]
             [clj-time.core :as t]
             [clj-time.format :as tf]))
 
@@ -15,11 +15,10 @@
       date
       (throw (ex-info (str "incorrect date string: " date-string) {})))))
 
-(defn today[]
-  (if (env :testing)
-    (-> (env :testing-date))
+(defn today []
+  (if (c/is-testing)
+    (c/testing-date)
     (-> (t/now)
         (t/to-time-zone helsinki-tz)
         (.toLocalDate)
         str)))
-

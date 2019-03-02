@@ -7,7 +7,6 @@
             [ring.middleware.keyword-params :as ring-kw-params]
             [ring.util.response :as resp]
             [ring.adapter.jetty :as jetty]
-            [environ.core :refer [env]]
             [m-cal.bookings :as bookings]
             [m-cal.bookings-export :as bookings-export]
             [m-cal.config :as config]
@@ -98,12 +97,9 @@
 (defn setup
   []
   (config/verify-config)
-  (when (nil? (env :database-url))
-    (throw (Error. "You must define the database URI in environment variable DATABASE_URL")))
-  (when (nil? (env :testing))
+  (when (not (config/is-testing))
     (email-sender/send-email-confirmations)))
 
 (defn -main [& [port]]
   (setup)
-  (let [port (Integer. (or port (env :port) 5000))]
-    (jetty/run-jetty app {:port port :join? false})))
+  (jetty/run-jetty app {:port (config/port) :join? false}))

@@ -1,5 +1,6 @@
 (ns m-cal.db-common
   (:require [m-cal.pg-types]
+            [m-cal.config :as config]
             [jdbc.pool.c3p0 :as pool]
             [hugsql.core :as hugsql]))
 
@@ -16,7 +17,7 @@
 
 ;; Database spec. Based on the Heroku c3p0 sample code
 (defn db-uri []
-  (java.net.URI. (System/getenv "DATABASE_URL")))
+  (java.net.URI. (config/database-uri)))
 
 (defn db-user-and-password []
   (let [userinfo (.getUserInfo (db-uri))]

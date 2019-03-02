@@ -1,8 +1,15 @@
 (ns m-cal.config
-  (:require
-   [environ.core :refer [env]]
-   [m-cal.util :refer [parse-int]]
-))
+  (:require [environ.core :refer [env]]))
+
+(defn parse-int [number-string]
+  (try (Integer/parseInt number-string)
+       (catch Exception e nil)))
+
+(defn port []
+  (or (parse-int (env :port)) 3000))
+
+(defn database-uri []
+  (env :database-url))
 
 (defn required-days []
   (parse-int (env :required-days)))
@@ -33,10 +40,20 @@
   (str (base-uri-for-updates) "?user=" (:secret_id user-id)))
 
 (defn verify-config []
-  (when (some #(nil? %)
-              [(env :first-booking-date)
-               (env :last-booking-date)
-               (required-days)
-               (env :base-uri-for-updates)
-               (env :default-user)])
-    (throw (Exception. "You must define environment variables FIRST_BOOKING_DATE, LAST_BOOKING_DATE, REQUIRED_DAYS, and BASE_URI_FOR_UPDATES DEFAULT_USER"))))
+  (let [cal-conf (calendar-config)]
+    (when (some #(nil? %)
+                [(database-uri)
+                 (:first_date cal-conf)
+                 (:last_date cal-conf)
+                 (:required_days cal-conf)
+                 (base-uri-for-updates)
+                 (default-user)])
+      (throw (Exception. "You must define environment variables DATABASE_URL FIRST_BOOKING_DATE, LAST_BOOKING_DATE, REQUIRED_DAYS, and BASE_URI_FOR_UPDATES DEFAULT_USER")))))
+
+(defn is-testing []
+  (some? (env :testing)))
+
+(defn testing-date []
+  (if (and (is-testing) (env :testing-date))
+    (env :testing-date)
+    (throw (ex-info "testing-date was called but TESTING_DATE environment variable is not set"))))
