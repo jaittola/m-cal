@@ -74,25 +74,25 @@
 
 (def app
   (routes
-    (-> (context "/bookings" []
-          (-> booking-routes
-              (middleware/wrap-json-body {:keywords? true})
-              (wrap-tokenauth-and-require-role ["user" "admin"])
-              (middleware/wrap-json-response))))
-    (-> (context "/admin" []
-          (-> admin-routes
-              (middleware/wrap-json-body {:keywords? true})
-              (wrap-tokenauth-and-require-role ["admin"])
-              (middleware/wrap-json-response))))
-    (-> (context "/export" []
-                 (-> export-routes
-                     (wrap-form-token-auth-and-require-role ["admin"])
-                     (ring-kw-params/wrap-keyword-params)
-                     (ring-params/wrap-params)
-                     (middleware/wrap-json-response))))
-    (-> other-routes
-        (middleware/wrap-json-body {:keywords? true})
-        (middleware/wrap-json-response))))
+   (-> (context "/bookings" []
+                (-> booking-routes
+                    (middleware/wrap-json-body {:keywords? true})
+                    (wrap-tokenauth-and-require-role ["user" "admin"])
+                    (middleware/wrap-json-response))))
+   (-> (context "/admin" []
+                (-> admin-routes
+                    (middleware/wrap-json-body {:keywords? true})
+                    (wrap-tokenauth-and-require-role ["admin"])
+                    (middleware/wrap-json-response))))
+   (-> (context "/export" []
+                (-> export-routes
+                    (wrap-form-token-auth-and-require-role ["admin"])
+                    (ring-kw-params/wrap-keyword-params)
+                    (ring-params/wrap-params)
+                    (middleware/wrap-json-response))))
+   (-> other-routes
+       (middleware/wrap-json-body {:keywords? true})
+       (middleware/wrap-json-response))))
 
 (defn setup
   []
