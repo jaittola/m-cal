@@ -33,6 +33,9 @@
   {:from (env :email-confirmation-from)
    :subject (env :email-confirmation-subject)})
 
+(defn require-tls []
+  (some? (env :require-tls)))
+
 (defn base-uri-for-updates []
   (env :base-uri-for-updates))
 

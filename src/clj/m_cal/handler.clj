@@ -5,6 +5,7 @@
             [ring.middleware.defaults :as ring-defaults]
             [ring.middleware.params :as ring-params]
             [ring.middleware.keyword-params :as ring-kw-params]
+            [ring.middleware.ssl :as ring-ssl]
             [ring.util.response :as resp]
             [ring.adapter.jetty :as jetty]
             [m-cal.bookings :as bookings]
@@ -72,25 +73,36 @@
   (route/resources "/")
   (route/not-found "Not Found"))
 
+(defn require-tls [handler]
+  (if (config/require-tls)
+    (ring-ssl/wrap-forwarded-scheme
+     (ring-ssl/wrap-ssl-redirect handler))
+    (fn [request]
+      (handler request))))
+
 (def app
   (routes
    (-> (context "/bookings" []
                 (-> booking-routes
+                    (require-tls)
                     (middleware/wrap-json-body {:keywords? true})
                     (wrap-tokenauth-and-require-role ["user" "admin"])
                     (middleware/wrap-json-response))))
    (-> (context "/admin" []
                 (-> admin-routes
+                    (require-tls)
                     (middleware/wrap-json-body {:keywords? true})
                     (wrap-tokenauth-and-require-role ["admin"])
                     (middleware/wrap-json-response))))
    (-> (context "/export" []
                 (-> export-routes
+                    (require-tls)
                     (wrap-form-token-auth-and-require-role ["admin"])
                     (ring-kw-params/wrap-keyword-params)
                     (ring-params/wrap-params)
                     (middleware/wrap-json-response))))
    (-> other-routes
+       (require-tls)
        (middleware/wrap-json-body {:keywords? true})
        (middleware/wrap-json-response))))
 

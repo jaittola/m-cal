@@ -132,6 +132,18 @@ SendGrid may have other relevant settings. Please go through the
 SendGrid configuration UI and make sure that the settings are suitable
 for you.
 
+### TLS
+
+When the application has been installed into an environment in which
+the reverse proxy permits traffic without TLS, you can enforce
+redirection to the TLS port (443) by setting the environment variable
+
+```
+REQUIRE_TLS=1
+```
+
+This setting is useful in Heroku, for example.
+
 ## Clojure development instructions
 
 After starting the server with `lein ring server` or `lein ring
