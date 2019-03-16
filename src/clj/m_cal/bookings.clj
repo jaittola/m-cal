@@ -1,8 +1,7 @@
 (ns m-cal.bookings
   (:require [m-cal.config :as config]
-            [m-cal.util :refer [parse-int]]
+            [m-cal.util :refer [parse-int parse-date-string]]
             [m-cal.db-common :as db-common]
-            [m-cal.util :refer [parse-date-string today days-from-today]]
             [m-cal.validation :as validation]
             [hugsql.core :as hugsql]
             [clojure.java.jdbc :as jdbc]
@@ -181,7 +180,7 @@
 
 (defn assert-bookings-not-within-buffer-days
   [bookings buffer]
-  (let [earliest-permitted (days-from-today buffer)]
+  (let [earliest-permitted (config/days-from-today buffer)]
     (doseq [booked-date bookings]
       (if (date-str-less booked-date earliest-permitted)
         (throw (IllegalArgumentException. "Date is in the past or within the buffer days"))))))

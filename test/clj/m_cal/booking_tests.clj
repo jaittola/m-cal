@@ -1,7 +1,7 @@
 (ns m-cal.booking-tests
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [m-cal.test-utils :as test-utils]
-            [m-cal.util :as app-utils]))
+            [m-cal.config :as app-config]))
 
 (use-fixtures :once test-utils/setup-handler-config-fixture)
 (use-fixtures :each test-utils/reset-db-fixture)
@@ -207,7 +207,7 @@
                                                :yacht_name "s/y Last Minute"
                                                :email "matti@example.com"
                                                :phone "04012345690"
-                                               :selected_dates [(app-utils/today) "2019-03-31"]}
+                                               :selected_dates [(app-config/today) "2019-03-31"]}
                                               token)))
 
 (deftest admin-del-booking

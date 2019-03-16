@@ -1,9 +1,35 @@
 (ns m-cal.config
-  (:require [environ.core :refer [env]]))
+  (:require [environ.core :refer [env]]
+            [clj-time.core :as t]
+            [m-cal.util :refer [parse-date-string parse-int]]))
 
-(defn parse-int [number-string]
-  (try (Integer/parseInt number-string)
-       (catch Exception e nil)))
+(defn is-testing []
+  (some? (env :testing)))
+
+(defn testing-date []
+  (if (and (is-testing) (env :testing-date))
+    (env :testing-date)
+    (throw (ex-info "testing-date was called but TESTING_DATE environment variable is not set"))))
+
+(def helsinki-tz (t/time-zone-for-id "Europe/Helsinki"))
+
+(defn today-date []
+  (-> (t/now)
+      (t/to-time-zone helsinki-tz)
+      (.toLocalDate)))
+
+(defn today []
+  (if (is-testing)
+    (testing-date)
+    (str (today-date))))
+
+(defn days-from-today [days-to-add]
+  (let [this-day (if (is-testing)
+                   (parse-date-string (testing-date))
+                   (today-date))]
+    (-> this-day
+        (.plusDays days-to-add)
+        (str))))
 
 (defn port []
   (or (parse-int (env :port)) 3000))
@@ -20,7 +46,9 @@
 (defn calendar-config []
   {:first_date (env :first-booking-date)
    :last_date (env :last-booking-date)
-   :required_days (required-days)})
+   :required_days (required-days)
+   :buffer_days_for_cancel (buffer-days-for-cancel)
+   :today (today)})
 
 (defn default-user []
   (env :default-user))
@@ -55,11 +83,3 @@
                  (base-uri-for-updates)
                  (default-user)])
       (throw (Exception. "You must define environment variables DATABASE_URL FIRST_BOOKING_DATE, LAST_BOOKING_DATE, REQUIRED_DAYS, and BASE_URI_FOR_UPDATES DEFAULT_USER")))))
-
-(defn is-testing []
-  (some? (env :testing)))
-
-(defn testing-date []
-  (if (and (is-testing) (env :testing-date))
-    (env :testing-date)
-    (throw (ex-info "testing-date was called but TESTING_DATE environment variable is not set"))))
