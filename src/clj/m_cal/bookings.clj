@@ -42,12 +42,6 @@
                                 {:user_id user-id})
        (map #(:booked_date %))))
 
-(defn map-dates-to-booking-ids [booking-id-containers selected_dates]
-  (map (fn [booking-id-container date]
-         {:booking_id (:id booking-id-container)
-          :booked_date date})
-       booking-id-containers selected_dates))
-
 (defn success-booking-reply [connection user-with-ids selected_dates]
   {:status 200
    :body {:user user-with-ids
@@ -199,29 +193,32 @@
 (defn map-booked-dates [bookings]
   (map #(:booked_date %) bookings))
 
+(defn find-bookings-to-delete [user-bookings-in-db selected-dates]
+  (filter (fn [booking] (not (some #(= (:booked_date booking) %) selected-dates))) user-bookings-in-db))
+
+(defn find-bookings-to-add [user-bookings-in-db selected-dates]
+  (let [user-bookings-in-db-dates (map-booked-dates user-bookings-in-db)]
+    (filter (fn [booking] (not (some #(= booking %) user-bookings-in-db-dates)))
+            selected-dates)))
+
 (defn update-booking-with-validated-params [connection
                                             user-with-ids
-                                            selected_dates
+                                            selected-dates
                                             user-login-info]
   (try
     (db-update-user connection
                     user-with-ids)
     (let [user-bookings-in-db (db-select-user-bookings-for-update connection
                                                                   {:user_id (:id user-with-ids)})
-          user-bookings-in-db-dates (map-booked-dates user-bookings-in-db)
-          bookings-to-delete (filter (fn [booking] (not (some #(= (:booked_date booking) %) selected_dates))) user-bookings-in-db)
+          bookings-to-delete (find-bookings-to-delete user-bookings-in-db selected-dates)
+          bookings-to-add (find-bookings-to-add user-bookings-in-db selected-dates)
           booking-dates-to-delete (map-booked-dates bookings-to-delete)
-          bookings-to-add (filter (fn [booking] (not (some #(= booking %) user-bookings-in-db-dates)))
-                                  selected_dates)
           _ (assert-bookings-not-in-the-past bookings-to-add)
           _ (assert-bookings-not-within-buffer-days booking-dates-to-delete (config/buffer-days-for-cancel))
           _ (database-delete-bookings connection bookings-to-delete)
-
           inserted-bookings-ids (database-insert-bookings connection
                                                           bookings-to-add
                                                           user-with-ids)
-          dates-to-inserted-booking-ids (map-dates-to-booking-ids inserted-bookings-ids
-                                                                  bookings-to-add)
           user-login-id (:user_login_id user-login-info)]
       (if (not (every? empty? [bookings-to-delete bookings-to-add]))
         (do
@@ -231,7 +228,7 @@
                                                  db-common/log-entry-booking-release
                                                  user-login-id)
           (db-common/database-insert-booking-log connection
-                                                 dates-to-inserted-booking-ids
+                                                 inserted-bookings-ids
                                                  user-with-ids
                                                  db-common/log-entry-booking-book
                                                  user-login-id))
@@ -242,7 +239,7 @@
       (db-add-to-confirmation-queue connection user-with-ids)
       (success-booking-reply connection
                              user-with-ids
-                             selected_dates))
+                             selected-dates))
     (catch PSQLException pse
       (handle-psql-error pse (:id user-with-ids)))
     (catch IllegalArgumentException e
@@ -281,11 +278,9 @@
                    bookings-ids (database-insert-bookings connection
                                                           selected_dates
                                                           user-id)
-                   dates-to-booking-ids (map-dates-to-booking-ids bookings-ids
-                                                                  selected_dates)
                    user-details (user-with-ids-from-user user user-id)
                    _ (db-common/database-insert-booking-log connection
-                                                            dates-to-booking-ids
+                                                            bookings-ids
                                                             user-details
                                                             db-common/log-entry-booking-book
                                                             user-login-id)]

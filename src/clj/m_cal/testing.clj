@@ -25,4 +25,4 @@
                                                    user)]
         (bookings/database-insert-bookings connection
                                            selected_dates
-                                  user-id)))))
+                                           user-id)))))

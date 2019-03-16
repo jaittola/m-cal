@@ -36,7 +36,7 @@ RETURNING id, secret_id;
 -- :doc Insert a booking into the database
 INSERT INTO booking (booked_date,  users_id)
 VALUES (TO_DATE(:booked_date, 'YYYY-MM-DD'), :users_id)
-RETURNING id;
+RETURNING id AS booking_id, TO_CHAR(booked_date, 'YYYY-MM-DD') AS booked_date;
 
 -- :name db-insert-booking-log :<!
 -- :doc Insert a booking log entry into the database

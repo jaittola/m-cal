@@ -217,7 +217,7 @@
                                                                     :email "tom@example.com"
                                                                     :phone "0412222114424"
                                                                     :selected_dates ["2019-02-02" "2019-04-13"]})
-        del-response (test-utils/delete-booking-admin (:id booking1) admin-token)
+        del-response (test-utils/delete-booking-admin (:booking_id booking1) admin-token)
         bookings-after-delete (test-utils/get-all-booking-values admin-token)
         b1 (first bookings-after-delete)]
     (is (= 200 (:status del-response)))
@@ -231,7 +231,7 @@
                                                                     :email "tom@example.com"
                                                                     :phone "0412222114424"
                                                                     :selected_dates ["2019-02-02" "2019-04-13"]})
-        del-response (test-utils/delete-booking-admin (:id booking1) user-token)
+        del-response (test-utils/delete-booking-admin (:booking_id booking1) user-token)
         bookings-after-delete (test-utils/get-all-booking-values user-token)]
     (is (= 401 (:status del-response)))
     (is (= 2 (count bookings-after-delete)))))
