@@ -14,6 +14,9 @@
 (defn required-days []
   (parse-int (env :required-days)))
 
+(defn buffer-days-for-cancel []
+  (parse-int (or (env :booking-cancel-buffer) "2")))
+
 (defn calendar-config []
   {:first_date (env :first-booking-date)
    :last_date (env :last-booking-date)

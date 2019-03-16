@@ -1,6 +1,7 @@
 (ns m-cal.booking-tests
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [m-cal.test-utils :as test-utils]))
+            [m-cal.test-utils :as test-utils]
+            [m-cal.util :as app-utils]))
 
 (use-fixtures :once test-utils/setup-handler-config-fixture)
 (use-fixtures :each test-utils/reset-db-fixture)
@@ -168,6 +169,46 @@
                                            :phone "0501234"
                                            :selected_dates ["2019-02-02" "2019-01-31"]}
                                           token)))
+
+(deftest user-cannot-modify-past-dates-to-future-in-update
+  (let [token (user-login)]
+    (test-utils/add-test-booking-unchecked {:name "Tom Anderson"
+                                            :yacht_name "s/y Meriruoho"
+                                            :email "tom@example.com"
+                                            :phone "0412222114424"
+                                            :selected_dates ["2019-02-02" "2019-04-13"]})
+    (assert-update-booking-fails-with-400 (test-utils/get-secret-id "Tom Anderson")
+                                          {:name "Tom Anderson"
+                                           :yacht_name "s/y Meriruoho"
+                                           :email "tom@example.com"
+                                           :phone "0501234"
+                                           :selected_dates ["2019-04-12" "2019-04-13"]}
+                                          token)))
+
+(deftest user-can-make-booking-within-buffer-days-but-cannot-change-it
+  (let [token (user-login)]
+    (test-utils/add-test-booking-successfully {:name "Matti Myöhäinen"
+                                               :yacht_name "s/y Last Minute"
+                                               :email "matti@example.com"
+                                               :phone "04012345690"
+                                               :selected_dates ["2019-03-10" "2019-03-04"]}
+                                              token)
+    (assert-update-booking-fails-with-400 (test-utils/get-secret-id "Matti Myöhäinen")
+                                          {:name "Matti Myöhäinen"
+                                           :yacht_name "s/y Last minute"
+                                           :email "matti@example.com"
+                                           :phone "04012345690"
+                                           :selected_dates ["2019-03-10" "2019-03-09"]}
+                                          token)))
+
+(deftest user-can-make-booking-for-same-date
+  (let [token (user-login)]
+    (test-utils/add-test-booking-successfully {:name "Matti Myöhäinen"
+                                               :yacht_name "s/y Last Minute"
+                                               :email "matti@example.com"
+                                               :phone "04012345690"
+                                               :selected_dates [(app-utils/today) "2019-03-31"]}
+                                              token)))
 
 (deftest admin-del-booking
   (let [admin-token (admin-login)

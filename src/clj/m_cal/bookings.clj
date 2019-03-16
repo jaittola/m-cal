@@ -2,7 +2,7 @@
   (:require [m-cal.config :as config]
             [m-cal.util :refer [parse-int]]
             [m-cal.db-common :as db-common]
-            [m-cal.util :refer [parse-date-string today]]
+            [m-cal.util :refer [parse-date-string today days-from-today]]
             [m-cal.validation :as validation]
             [hugsql.core :as hugsql]
             [clojure.java.jdbc :as jdbc]
@@ -121,9 +121,14 @@
              (handle-psql-error pse)))))
 
 (defn date-str-less-or-eq
-  "return true iff date-1 is less or equal than date-2. Both are given as date strings (e.g. '2018-03-22')"
+  "return true if date-1 is less or equal than date-2. Both are given as date strings (e.g. '2018-03-22')"
   [date-1 date-2]
   (<= (.compareTo date-1 date-2) 0))
+
+(defn date-str-less
+  "return true if date-1 is less than date-2. Both are given as date strings (e.g. '2018-03-22')"
+  [date-1 date-2]
+  (< (.compareTo date-1 date-2) 0))
 
 (defn assert-is-in-range [date first-date last-date]
   (if (not (and (date-str-less-or-eq first-date date)
@@ -180,11 +185,19 @@
           int-validator
           Integer.))
 
+(defn assert-bookings-not-within-buffer-days
+  [bookings buffer]
+  (let [earliest-permitted (days-from-today buffer)]
+    (doseq [booked-date bookings]
+      (if (date-str-less booked-date earliest-permitted)
+        (throw (IllegalArgumentException. "Date is in the past or within the buffer days"))))))
+
 (defn assert-bookings-not-in-the-past
   [bookings]
-  (doseq [booked-date bookings]
-    (if (date-str-less-or-eq booked-date (today))
-      (throw (IllegalArgumentException. "date in the past")))))
+  (assert-bookings-not-within-buffer-days bookings 0))
+
+(defn map-booked-dates [bookings]
+  (map #(:booked_date %) bookings))
 
 (defn update-booking-with-validated-params [connection
                                             user-with-ids
@@ -193,13 +206,15 @@
   (try
     (db-update-user connection
                     user-with-ids)
-    (let [db-selected-dates (db-select-user-bookings-for-update connection
-                                                              {:user_id (:id user-with-ids)})
-          db-selected-dates-values (map #(:booked_date %) db-selected-dates)
-          bookings-to-delete (filter (fn [booking] (not (some #(= (:booked_date booking) %) selected_dates))) db-selected-dates)
-          bookings-to-add (filter (fn [booking] (not (some #(= booking %) db-selected-dates-values)))
+    (let [user-bookings-in-db (db-select-user-bookings-for-update connection
+                                                                  {:user_id (:id user-with-ids)})
+          user-bookings-in-db-dates (map-booked-dates user-bookings-in-db)
+          bookings-to-delete (filter (fn [booking] (not (some #(= (:booked_date booking) %) selected_dates))) user-bookings-in-db)
+          booking-dates-to-delete (map-booked-dates bookings-to-delete)
+          bookings-to-add (filter (fn [booking] (not (some #(= booking %) user-bookings-in-db-dates)))
                                   selected_dates)
           _ (assert-bookings-not-in-the-past bookings-to-add)
+          _ (assert-bookings-not-within-buffer-days booking-dates-to-delete (config/buffer-days-for-cancel))
           _ (database-delete-bookings connection bookings-to-delete)
 
           inserted-bookings-ids (database-insert-bookings connection
@@ -231,7 +246,7 @@
     (catch PSQLException pse
       (handle-psql-error pse (:id user-with-ids)))
     (catch IllegalArgumentException e
-      (error-reply 400 "trying to modify bookings in the past"))))
+      (error-reply 400 "It is not possible to modify the requested dates."))))
 
 (defn admin-del-booking-with-validated-id [id user-login-info]
   (try (jdbc/with-db-transaction [connection @db-common/dbspec]
