@@ -15,6 +15,13 @@
 (defn parse-ymd [isodate]
   (timef/parse ymd-formatter isodate))
 
+(defn is-days-after-today? [today isodate number-of-days]
+  (let [earliest-date (time/plus today (time/days number-of-days))
+        other-date (parse-ymd isodate)]
+    (or
+     (time/= other-date earliest-date)
+     (time/after? other-date earliest-date))))
+
 (defn format-date [isodate]
   (let [date (parse-ymd isodate)
         weekday-str (nth weekdays (time/day-of-week date))]
@@ -74,7 +81,7 @@
 (defn find-booking-for [bookings day]
   (first (filter #(== (:isoformat day) (:booked_date %)) bookings)))
 
-(defn render-day [daydata today ratom render-booking-details cell-on-click]
+(defn render-day [daydata today today-iso ratom render-booking-details cell-on-click]
   (let [day (:day daydata)
         thedate (:date day)
         is-in-past (time/before? thedate today)
@@ -83,13 +90,13 @@
                                          ["calendar-day"
                                           (when (== 7 (:weekday day)) "calendar-sunday")
                                           (when is-in-past "calendar-day-past")]))]
-    [:tr {:on-click #(when cell-on-click (cell-on-click daydata today))}
+    [:tr {:on-click #(when cell-on-click (cell-on-click daydata today-iso))}
      [:td {:class (str "calendar-date-cell " classes)}
       (:formatted-date day)]
      [:td {:class (str "calendar-booking-cell " classes)}
-      [render-booking-details today daydata ratom]]]))
+      [render-booking-details today-iso daydata ratom]]]))
 
-(defn render-month [{:keys [monthname days]} booked-dates today ratom render-booking-details cell-on-click]
+(defn render-month [{:keys [monthname days]} booked-dates today today-iso ratom render-booking-details cell-on-click]
   [:div.calendar-month
    [:h4 monthname]
    [:table.calendar-month-table
@@ -103,13 +110,15 @@
                  ^{:key (:key daydata)} [render-day
                                          daydata
                                          today
+                                         today-iso
                                          ratom
                                          render-booking-details
                                          cell-on-click]))
           (doall))]]])
 
 (defn render-calendar [ratom first-date last-date bookings render-booking-details & [cell-on-click]]
-  (let [today (time/now)]
+  (let [today (:today @ratom)
+        today-iso (:today-iso @ratom)]
     [:div.calendar-area
      [:h2 "Varauskalenteri"]
      (when (and first-date last-date)
@@ -117,6 +126,6 @@
         (->> (make-calendar-seq-memo first-date last-date)
              (map (fn [month]
                     ^{:key (str "month-" (:monthname month))}
-                    [render-month month bookings today ratom render-booking-details cell-on-click]))
+                    [render-month month bookings today today-iso ratom render-booking-details cell-on-click]))
              (doall))])]))
 

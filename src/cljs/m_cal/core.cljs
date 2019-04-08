@@ -21,6 +21,9 @@
 (defonce app-state
   (reagent/atom {:user-token nil
                  :required_days 2
+                 :buffer_days_for_cancel 2
+                 :today-iso nil
+                 :today nil
                  :selected_dates []
                  :name ""
                  :email ""
@@ -50,18 +53,25 @@
 (defn update-state-from-text-input [field on-change-event]
   (swap! app-state assoc field (-> on-change-event .-target .-value)))
 
+(defn make-selection-date [date & [is-cancellable]]
+  (let [cancellable (if (some? is-cancellable)
+                      is-cancellable
+                      true)]
+    {:date date
+     :is-cancellable cancellable}))
+
 (defn add-date-selection [date]
   (clear-statuses)
   (swap! app-state (fn [state new-date]
                      (->> (conj (:selected_dates state) new-date)
                           (distinct)
                           (assoc state :selected_dates)))
-         date))
+         (make-selection-date date)))
 
 (defn remove-date-selection [date]
   (clear-statuses)
   (swap! app-state (fn [state new-date]
-                     (->> (filter #(not (= date %)) (:selected_dates state))
+                     (->> (filter #(not (= date (:date %))) (:selected_dates state))
                           (assoc state :selected_dates)))
          date))
 
@@ -82,28 +92,37 @@
   (swap! app-state assoc
          :user_private_id nil))
 
+(defn add-cancellation-status [selected-dates]
+  (let [dates (or selected-dates [])
+        today (:today @app-state)
+        buffer-days (:buffer_days_for_cancel @app-state)]
+    (map (fn [d]
+           (->> (u/is-days-after-today? today d buffer-days)
+                (make-selection-date d)))
+         dates)))
+
 (defn set-user [user selected_dates]
-  (swap! app-state assoc
-         :selected_dates []
-         :name (:name user)
-         :email (:email user)
-         :phone (:phone user)
-         :yacht_name (:yacht_name user)
-         :user_private_id (:secret_id user)
-         :user_public_id (:id user)
-         :selected_dates (or selected_dates [])))
+  (let [selected-dates-with-cancellation (add-cancellation-status selected_dates)]
+    (swap! app-state assoc
+           :selected_dates []
+           :name (:name user)
+           :email (:email user)
+           :phone (:phone user)
+           :yacht_name (:yacht_name user)
+           :user_private_id (:secret_id user)
+           :user_public_id (:id user)
+           :selected_dates selected-dates-with-cancellation)))
 
 (defn set-selected-dates [selected_dates]
   (swap! app-state assoc
-         :selected_dates (or selected_dates [])))
+         :selected_dates (add-cancellation-status selected_dates)))
 
 (defn set-user-private-id [private_id]
   (swap! app-state assoc
          :user_private_id private_id))
 
 (defn clear-selected-days []
-  (swap! app-state assoc
-         :selected_dates []))
+  (set-selected-dates nil))
 
 (defn set-request-in-progress [in-progress]
   (swap! app-state assoc
@@ -113,7 +132,10 @@
   (swap! app-state assoc
          :first_date (:first_date config)
          :last_date (:last_date config)
-         :required_days (or (:required_days config) 2)))
+         :required_days (or (:required_days config) 2)
+         :buffer_days_for_cancel (:buffer_days_for_cancel config)
+         :today-iso (:today config)
+         :today (u/parse-ymd (:today config))))
 
 (defn clear-user-token-and-cookie []
   (t/clear-cookie)
@@ -197,7 +219,9 @@
                                   :email (:email @ratom)
                                   :phone (:phone @ratom)
                                   :yacht_name (:yacht_name @ratom)
-                                  :selected_dates (:selected_dates @ratom)}}
+                                  :selected_dates (map
+                                                   #(:date %)
+                                                   (:selected_dates @ratom))}}
               request (if private-id
                         (http/put (str "/bookings/api/1/bookings/" private-id) body)
                         (http/post "/bookings/api/1/bookings" body))
@@ -303,20 +327,23 @@
     ]
    ])
 
-(defn selected_day [day today]
-   (if day
-     [:div.selected_day
-      [:div.selected_day_date (u/format-date day)]
-      (when (time/after? (u/parse-ymd day) today)
-        [:input.booking_cancel_button
-         {:type "image"
-          :on-click #(remove-date-selection day)
-          :src "images/red-trash.png"}])]
-     [:div.selected_day [u/blank-element]]))
+(defn selected_day [day]
+  (if day
+    (let [date (:date day)]
+      [:div.selected_day
+       [:div.selected_day_date (u/format-date date)]
+       (when (:is-cancellable day)
+         [:input.booking_cancel_button
+          {:type "image"
+           :on-click #(remove-date-selection date)
+           :src "images/red-trash.png"}])])
+    [:div.selected_day [u/blank-element]]))
 
 (defn selection_area [ratom]
-  (let [today (time/now)
-        days (vec (sort (:selected_dates @ratom)))]
+  (let [days (->>
+              (:selected_dates @ratom)
+              (sort #(< (:date %1) (:date %2)))
+              (vec))]
     [:div.selected_days_area
      [:div.contact_title.selected_days_title "Valitsemasi vartiovuorot:"]
      [:div.selected_days_selections
@@ -324,7 +351,7 @@
            (map (fn [dayidx]
                   (let [day (get days dayidx)]
                     ^{:key (str "day-" dayidx)}
-                    [selected_day day today]))))]]))
+                    [selected_day day]))))]]))
 
 (defn selection_button_area [ratom]
   (let [updating (some? (:user_private_id @ratom))]
@@ -364,39 +391,44 @@
    [day-details-chosen-cancellable]
    [my-details-for-booking ratom]])
 
-(defn is-in-future? [day today]
-  (time/after? (:date day) today))
+(defn is-in-future? [isoday isotoday]
+  (>= isoday isotoday))
 
-(defn is-booked-for-me? [day]
+(defn my-booking-for-day [day]
   (let [isoday (:isoformat day)]
-    (some #(== % isoday) (:selected_dates @app-state))))
+    (->>
+     (:selected_dates @app-state)
+     (filter #(== (:date %) isoday))
+     (first))))
 
 (defn has-required-bookings? []
   (>= (count (:selected_dates @app-state)) (:required_days @app-state)))
 
-(defn booking-or-free [today daydata ratom] ""
+(defn booking-or-free [today-iso daydata ratom] ""
   (let [booking (:booking daydata)
         day (:day daydata)
         isoday (:isoformat day)
-        day-is-in-future (is-in-future? day today)
-        is-booked-for-me (is-booked-for-me? day)]
+        day-is-in-future (is-in-future? isoday today-iso)
+        my-booking (my-booking-for-day day)
+        is-cancellable (:is-cancellable my-booking)]
     (cond
-      (and is-booked-for-me day-is-in-future) [calendar-cell-booked-for-me ratom]
-      (and is-booked-for-me (not day-is-in-future)) [booking-details booking]
+      (and my-booking is-cancellable) [calendar-cell-booked-for-me ratom]
+      (and my-booking (not is-cancellable)) [booking-details booking]
       (and booking (not (= (:user_id booking) (:user_public_id @ratom)))) [booking-details booking]
       (and (nil? booking) (not day-is-in-future)) u/blank-element
       (has-required-bookings?) [day-details-free-but-not-bookable]
       :else [day-details-bookable])))
 
-(defn cell-click-handler [daydata today]
+(defn cell-click-handler [daydata today-iso]
   (let [booking (:booking daydata)
         day (:day daydata)
         isoday (:isoformat day)
-        day-is-in-future (is-in-future? day today)
-        is-booked-for-me (is-booked-for-me? day)]
+        day-is-in-future (is-in-future? isoday today-iso)
+        my-booking (my-booking-for-day day)
+        is-cancellable (:is-cancellable my-booking)]
     (when day-is-in-future
       (cond
-        is-booked-for-me (remove-date-selection isoday)
+        is-cancellable (remove-date-selection isoday)
         (and (not (has-required-bookings?))
              (or (nil? booking)
                  (= (:user_id booking) (:user_public_id @app-state)))) (add-date-selection isoday)))))

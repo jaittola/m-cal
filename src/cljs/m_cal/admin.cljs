@@ -16,6 +16,7 @@
 
 (defonce app-state
   (reagent/atom {:page-state :bookings
+                 :today nil
                  :bookings []
                  :event-log []
                  :error-status nil
@@ -27,6 +28,8 @@
 
 (defn set-calendar-config [config]
   (swap! app-state assoc
+         :today-iso (:today config)
+         :today (u/parse-ymd (:today config))
          :first-date (:first_date config)
          :last-date (:last_date config)))
 
