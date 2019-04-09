@@ -277,8 +277,9 @@
     "yövartijana Särkällä kahtena yönä purjehduskauden aikana."]
     [:li "Varatun vartiovuoron laiminlyönnistä laskutetaan voimassa "
      "olevan hinnaston mukainen maksu."]
-    [:li "Vuorovarauksia on mahdollisuus muuttaa ennen "
-     "vartiointipäivää. Muutoksia juuri ennen vartiovuoroa "
+    [:li "Vuorovarauksia on voi muuttaa ennenn varattua vartiovuoroa. "
+     "Vuoroa ei kuitenkaan voi vaihtaa enää kahta päivää "
+     "ennen varattua päivää. Muutoksia juuri ennen vartiovuoroa "
      "on syytä välttää, jottei Särkkä jää ilman vartijaa. "
      "Toimiva vartiointi Särkällä on kaikkien veneenomistajien "
      "etujen mukaista ja estää mm. myrskyvahinkoja."]]
