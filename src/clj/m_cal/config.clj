@@ -38,7 +38,7 @@
   (env :database-url))
 
 (defn required-days []
-  (parse-int (env :required-days)))
+  (parse-int (or (env :required-days) "2")))
 
 (defn buffer-days-for-cancel []
   (parse-int (or (env :booking-cancel-buffer) "2")))

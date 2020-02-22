@@ -115,6 +115,12 @@
     (testing "dates cannot be too far into the future"
       (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2019-05-12" "2019-01-13"]) token))
 
+    (testing "only one date (two are needed)"
+      (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2019-05-12"]) token))
+
+    (testing "three dates (two are needed)"
+      (assert-add-booking-fails-with-400 (assoc test-booking :selected_dates ["2019-05-12" "2019-01-13"  "2019-01-13"]) token))
+
     (testing "phone number must be in an appropriate format I"
       (assert-add-booking-fails-with-400 (assoc test-booking :phone "98989898989") token))))
 

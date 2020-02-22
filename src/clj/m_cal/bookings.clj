@@ -149,7 +149,7 @@
                       #(re-matches phone-number-string-regex %)))
 (s/def ::local-date (s/and string?
                            #(re-matches local-date-string-regex %)))
-(s/def ::selected_dates (s/tuple ::local-date ::local-date))
+(s/def ::selected_dates (s/coll-of ::local-date :count (config/required-days)))
 (s/def ::booking (s/keys :req-un [::name ::yacht_name ::email ::phone ::selected_dates]))
 
 (def int-validator (validation/spec-validator-simple ::is-integer))
