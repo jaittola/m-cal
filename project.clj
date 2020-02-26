@@ -28,7 +28,7 @@
                  [org.apache.poi/poi-ooxml "4.1.2"]]
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-less "1.7.5"]
-            [lein-ring "0.12.4"]
+            [lein-ring "0.12.5"]
             [lein-ancient "0.6.15"]]
 
   :min-lein-version "2.5.3"
