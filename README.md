@@ -144,6 +144,23 @@ REQUIRE_TLS=1
 
 This setting is useful in Heroku, for example.
 
+## Running automated tests
+
+The code base contains automated tests for the backend. The tests
+excercise mainly the REST APIs.
+
+To run the tests once, run
+
+```
+./run-tests.sh
+```
+
+To run the tests whenever code is changed, run
+
+```
+./run-tests -a
+```
+
 ## Clojure development instructions
 
 After starting the server with `lein ring server` or `lein ring

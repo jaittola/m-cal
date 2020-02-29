@@ -29,7 +29,8 @@
   :plugins [[lein-cljsbuild "1.1.4"]
             [lein-less "1.7.5"]
             [lein-ring "0.12.5"]
-            [lein-ancient "0.6.15"]]
+            [lein-ancient "0.6.15"]
+            [lein-auto "0.1.3"]]
 
   :min-lein-version "2.5.3"
   :uberjar-name "m-cal-standalone.jar"
@@ -42,6 +43,9 @@
 
   :clean-targets ^{:protect false} ["resources/public/js"
                                     "target"]
+
+  :auto {"test" {:file-pattern #"\.(clj)$"}}
+
   :figwheel {:ring-handler m-cal.handler/app
              :css-dirs ["resources/public/css"]}
   :less {:source-paths ["less"]
