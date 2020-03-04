@@ -1,5 +1,6 @@
 (ns m-cal.booking-tests
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [clojure.string :refer [blank?]]
             [m-cal.test-utils :as test-utils]
             [m-cal.config :as app-config]))
 
@@ -143,6 +144,22 @@
       (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2019-05-15"} b1))
       (is (contains-key-vals {:name "Tom Anderson" :yacht_name "s/y Meriruoho" :booked_date "2019-05-16"} b2)))))
 
+(deftest booking-update-cannot-contain-only-one-booking
+  (let [token (user-login)]
+    (test-utils/add-test-booking-successfully {:name "Tom Anderson"
+                                               :yacht_name "s/y Meriruoho"
+                                               :email "tom@example.com"
+                                               :phone "0812342 2"
+                                               :selected_dates ["2019-05-12" "2019-05-13"]}
+                                              token)
+    (assert-update-booking-fails-with-400 (test-utils/get-secret-id "Tom Anderson")
+                                          {:name "Tom Anderson"
+                                           :yacht_name "s/y Meriruoho"
+                                           :email "tom@example.com"
+                                           :phone "+35840998877663"
+                                           :selected_dates ["2019-05-15"]}
+                                          token)))
+
 (deftest booking-update-can-contain-unmodified-dates-in-the-past
   (let [token (user-login)]
     (test-utils/add-test-booking-unchecked {:name "Tom Anderson"
@@ -215,6 +232,121 @@
                                                :phone "04012345690"
                                                :selected_dates [(app-config/today) "2019-03-31"]}
                                               token)))
+
+(deftest user-can-pay-one-booking-and-select-one
+  (let [token (user-login)
+        body (test-utils/add-test-booking-successfully-parsed-body {:name "Kimmo Kiireinen"
+                                                                    :yacht_name "s/y Quick"
+                                                                    :email "kimmo@example.com"
+                                                                    :phone "0401212122"
+                                                                    :selected_dates ["2019-04-02"]
+                                                                    :number_of_paid_bookings 1}
+                                                                   token)
+        { user-id :user_id secret-id :secret_id number-of-paid-bookings :number_of_paid_bookings } (:user body)
+        all-bookings-in-db (test-utils/get-all-booking-values token)
+        user-bookings-in-db (->> all-bookings-in-db
+                                 (filter #(= (:user-id %) user-id))
+                                 (map #(:booked_date %)))]
+    (is (not (blank? secret-id)))
+    (is (= 1 number-of-paid-bookings))
+    (is (= ["2019-04-02"] (:selected_dates body)))
+    (is (= (:selected_dates body) user-bookings-in-db))))
+
+(deftest user-can-pay-all-and-not-book
+  (let [token (user-login)
+        body (test-utils/add-test-booking-successfully-parsed-body {:name "Reino Rahamies"
+                                                                    :yacht_name "s/y Well off"
+                                                                    :email "reiska@example.com"
+                                                                    :phone "0409999999"
+                                                                    :selected_dates []
+                                                                    :number_of_paid_bookings 2}
+                                                                   token)
+        { user-id :user_id secret-id :secret_id number-of-paid-bookings :number_of_paid_bookings } (:user body)
+        all-bookings-in-db (test-utils/get-all-booking-values token)]
+    (is (not (blank? secret-id)))
+    (is (= 2 number-of-paid-bookings))
+    (is (= [] (:selected_dates body)))
+    (is (= [] all-bookings-in-db))))
+
+(deftest user-can-update-with-one-booking-paid-for
+  (let [token (user-login)
+        body (test-utils/add-test-booking-successfully-parsed-body {:name "Eero Esteellinen"
+                                                                    :yacht_name "s/y Obstacle"
+                                                                    :email "eero@example.com"
+                                                                    :phone "0403333333"
+                                                                    :selected_dates ["2019-04-04"]
+                                                                    :number_of_paid_bookings 1}
+                                                                   token)
+        { user-id :user_id secret-id :secret_id} (:user body)
+        query-result (test-utils/get-user-bookings secret-id token)
+        update-body (test-utils/update-booking-successfully-parsed-body secret-id
+                                                                        {:name "Eero Esteellinen"
+                                                                         :yacht_name "s/y Obstacle"
+                                                                         :email "eero@example.com"
+                                                                         :phone "0403333333"
+                                                                         :selected_dates ["2019-05-02"]}
+                                                                        token)
+        number-of-paid-bookings (-> update-body
+                                    :user
+                                    :number_of_paid_bookings)
+        all-bookings-in-db (test-utils/get-all-booking-values token)
+        user-bookings-in-db (->> all-bookings-in-db
+                                 (filter #(= (:user-id %) user-id))
+                                 (map #(:booked_date %)))]
+    (is (not (blank? secret-id)))
+    (is (= 1 number-of-paid-bookings))
+    (is (= ["2019-05-02"] (:selected_dates update-body)))
+    (is (= (:selected_dates update-body) user-bookings-in-db))))
+
+(deftest user-cannot-modify-paid-booking-count
+  (let [token (user-login)]
+    (testing "with no paid bookings, user cannot change to paid bookings"
+      (test-utils/add-test-booking-successfully-parsed-body {:name "Pekka Päättämätön"
+                                                             :yacht_name "s/y left-or-right"
+                                                             :email "pekka@example.com"
+                                                             :phone "040333333434"
+                                                             :selected_dates ["2019-04-09" "2019-04-10"]}
+                                                            token)
+      (assert-update-booking-fails-with-400 (test-utils/get-secret-id "Pekka Päättämätön")
+                                            {:name "Pekka Päättämätön"
+                                             :yacht_name "s/y left-or-right"
+                                             :email "pekka@example.com"
+                                             :phone "040333333434"
+                                             :selected_dates []
+                                             :number_of_paid_bookings 2}
+                                            token))
+    (testing "with one paid booking, user cannot change to fully paid bookings"
+      (test-utils/add-test-booking-successfully-parsed-body {:name "Teijo Tuuliviiri"
+                                                             :yacht_name "s/y windex"
+                                                             :email "teijo@example.com"
+                                                             :phone "040333333434"
+                                                             :selected_dates ["2019-04-11"]
+                                                             :number_of_paid_bookings 1}
+                                                            token)
+      (assert-update-booking-fails-with-400 (test-utils/get-secret-id "Teijo Tuuliviiri")
+                                            {name "Teijo Tuuliviiri"
+                                             :yacht_name "s/y windex"
+                                             :email "teijo@example.com"
+                                             :phone "040333333434"
+                                             :selected_dates []
+                                             :number_of_paid_bookings 2}
+                                            token))
+
+    (testing "with bookings, user cannot change to one paid booking"
+      (test-utils/add-test-booking-successfully-parsed-body {:name "Oiva Yövuorolainen"
+                                                             :yacht_name "s/y windex"
+                                                             :email "teijo@example.com"
+                                                             :phone "040333333434"
+                                                             :selected_dates ["2019-04-12" "2019-04-13"]}
+                                                            token)
+      (assert-update-booking-fails-with-400 (test-utils/get-secret-id "Oiva Yövuorolainen")
+                                            {:name "Oiva Yövuorolainen"
+                                             :yacht_name "s/y windex"
+                                             :email "teijo@example.com"
+                                             :phone "040333333434"
+                                             :selected_dates ["2019-04-12"]
+                                             :number_of_paid_bookings 1}
+                                            token))))
 
 (deftest admin-del-booking
   (let [admin-token (admin-login)

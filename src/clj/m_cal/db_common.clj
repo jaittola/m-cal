@@ -10,6 +10,7 @@
 (def log-entry-email-disabled 4)
 (def log-entry-contact-update 5)
 (def log-entry-admin-booking-delete 6)
+(def log-entry-admin-booking-params-modify 7)
 
 (def psql-unique-constraint-sqlstate 23505)
 

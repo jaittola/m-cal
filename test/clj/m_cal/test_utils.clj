@@ -4,7 +4,8 @@
             [ring.mock.request :as mock]
             [m-cal.handler :as handler]
             [m-cal.testing :as mcal-testing]
-            [cemerick.url :refer [url-encode]]))
+            [cemerick.url :refer [url-encode]]
+            [clojure.data.json :as json]))
 
 (defn http-req [url method & [body token]]
   "Perform an HTTP request using the Ring Mock"
@@ -78,6 +79,12 @@
         _ (is (= 200 (:status response)))]
     response))
 
+(defn add-test-booking-successfully-parsed-body
+  [booking user-token]
+  (-> (add-test-booking-successfully booking user-token)
+      (:body)
+      (json/read-str :key-fn keyword)))
+
 (defn add-test-booking-unchecked
   [booking]
   (mcal-testing/insert-booking-unchecked booking))
@@ -92,6 +99,11 @@
   [& [admin-token]]
   (http-get "/admin/api/1/all_bookings"
             admin-token))
+
+(defn get-user-bookings
+  [secret-id & [user-token]]
+  (http-get (str "/bookings/api/1/bookings/" secret-id)
+            user-token))
 
 (defn delete-booking-admin
   "Delete booking via an admin-only delete interface"
@@ -124,3 +136,9 @@
   (let [response (update-booking secret-id booking user-token)
         _ (is (= 200 (:status response)))]
     response))
+
+(defn update-booking-successfully-parsed-body
+  [secret-id booking user-token]
+  (-> (update-booking-successfully secret-id booking user-token)
+      (:body)
+      (json/read-str :key-fn keyword)))

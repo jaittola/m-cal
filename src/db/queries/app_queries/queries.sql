@@ -85,8 +85,22 @@ phone = :phone,
 email = :email
 WHERE id = :id;
 
+-- :name db-insert-booking-selections :insert
+-- :doc Insert user's booking parameters into database
+INSERT INTO user_booking_selections (
+users_id, number_of_paid_bookings)
+VALUES (:user_id, :number_of_paid_bookings);
+
+-- :name db-update-booking-selections-for-admin :! :n
+-- :doc Update user's booking selections by administrator.
+UPDATE user_booking_selections
+SET
+number_of_paid_bookings = :number_of_paid_bookings,
+timestamp = NOW()
+WHERE users_id = :user_id;
+
 -- :name db-select-user-bookings-for-update :? :*
--- :doc Find user's bookings
+-- :doc Find user's bookings for updating.
 SELECT
 id AS booking_id,
 TO_CHAR(booked_date, 'YYYY-MM-DD') AS booked_date
@@ -95,7 +109,7 @@ WHERE users_id = :user_id
 FOR UPDATE;
 
 -- :name db-select-user-bookings :? :*
--- :doc Find user's bookings for updating.
+-- :doc Find user's bookings.
 SELECT
 id AS booking_id,
 TO_CHAR(booked_date, 'YYYY-MM-DD') AS booked_date
@@ -105,26 +119,30 @@ WHERE users_id = :user_id;
 -- :name db-find-user-by-secret-id :? :*
 -- :doc Find user by secret id. Return data compatible with UserWithIDs records.
 SELECT
-id,
-secret_id,
-username AS name,
-yachtname AS yacht_name,
-email,
-phone
+u.id,
+u.secret_id,
+u.username AS name,
+u.yachtname AS yacht_name,
+u.email,
+u.phone,
+ubs.number_of_paid_bookings
 FROM users u
-WHERE secret_id = :secret_id;
+LEFT JOIN user_booking_selections ubs ON ubs.users_id = u.id
+WHERE u.secret_id = :secret_id;
 
 -- :name db-find-user-by-id :? :*
 -- :doc "Find user by sequential id. Return data compatiable with UserWithIDs records.
 SELECT
-id,
-secret_id,
-username AS name,
-yachtname AS yacht_name,
-email,
-phone
+u.id,
+u.secret_id,
+u.username AS name,
+u.yachtname AS yacht_name,
+u.email,
+u.phone,
+ubs.number_of_paid_bookings
 FROM users u
-WHERE id = :id;
+LEFT JOIN user_booking_selections ubs ON ubs.users_id = u.id
+WHERE u.id = :id;
 
 -- :name db-delete-booking :! :n
 -- :doc Delete bookings from database

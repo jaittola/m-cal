@@ -13,13 +13,17 @@
 
 (defrecord UserIDs [id secret_id])
 (defrecord User [name yacht_name phone email])
-(defrecord UserWithIDs [name yacht_name phone email id secret_id])
+(defrecord UserWithIDs [name yacht_name phone email id secret_id number_of_paid_bookings])
 (defrecord BookingValidation [user selected_dates validation-error])
 
+;; Note: This function needs to be rewritten. It is used in strange
+;; and inconsistent ways from various locations.
 (defn user-with-ids-from-user [user user-ids]
-  (map->UserWithIDs (assoc user
-                           :id (:id user-ids)
-                           :secret_id (:secret_id user-ids))))
+  (let [num-book (:number_of_paid_bookings user-ids)]
+    (-> user
+        (assoc :id (:id user-ids) :secret_id (:secret_id user-ids))
+        (cond-> num-book (assoc :number_of_paid_bookings num-book))
+        map->UserWithIDs)))
 
 (defn database-insert-user [connection user]
   (first (db-insert-user connection user)))
@@ -149,8 +153,10 @@
                       #(re-matches phone-number-string-regex %)))
 (s/def ::local-date (s/and string?
                            #(re-matches local-date-string-regex %)))
-(s/def ::selected_dates (s/coll-of ::local-date :count (config/required-days)))
-(s/def ::booking (s/keys :req-un [::name ::yacht_name ::email ::phone ::selected_dates]))
+(s/def ::selected_dates (s/coll-of ::local-date))
+(s/def ::number_of_paid_bookings int?)
+(s/def ::booking (s/keys :req-un [::name ::yacht_name ::email ::phone ::selected_dates]
+                         :opt-un [::number_of_paid_bookings]))
 
 (def int-validator (validation/spec-validator-simple ::is-integer))
 (def booking-spec-validator (validation/spec-validator ::booking))
@@ -177,6 +183,13 @@
   (some-> input-int
           int-validator
           Integer.))
+
+(defn validate-booking-count [number-of-paid-bookings
+                              selected-dates]
+  (let [bookings-needed (- (config/required-days)
+                           number-of-paid-bookings)]
+    (and (>= bookings-needed 0)
+         (= (count selected-dates) bookings-needed))))
 
 (defn assert-bookings-not-within-buffer-days
   [bookings buffer]
@@ -267,8 +280,11 @@
          (handle-psql-error pse))))
 
 (defn insert-booking [params user-login-info]
-  (let [{:keys [user selected_dates validation-error]} (validate-booking-input params)]
-    (if validation-error
+  (let [{:keys [user selected_dates validation-error]} (validate-booking-input params)
+        number-of-paid-bookings (or (:number_of_paid_bookings params) 0)
+        booking-count-ok (validate-booking-count number-of-paid-bookings
+                                                 selected_dates)]
+    (if (or validation-error (not booking-count-ok))
       (error-reply 400 validation-error)
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
              (assert-bookings-not-in-the-past selected_dates)
@@ -283,6 +299,10 @@
                                                             user-details
                                                             db-common/log-entry-booking-book
                                                             user-login-id)]
+               (when (> number-of-paid-bookings 0)
+                 (db-insert-booking-selections connection
+                                               {:user_id (:id user-id)
+                                                :number_of_paid_bookings number-of-paid-bookings}))
                (db-add-to-confirmation-queue connection user-id)
                (success-booking-reply connection
                                       (user-with-ids-from-user user user-id)
@@ -300,13 +320,16 @@
       :else (try (jdbc/with-db-transaction [connection @db-common/dbspec]
                    (let [user-from-db (first (db-find-user-by-secret-id connection
                                                                         {:secret_id (UUID/fromString secret_id)}))
-                         new-user (user-with-ids-from-user user user-from-db)]
-                     (if (nil? user-from-db)
-                       (error-reply 400 "No such user")
-                       (update-booking-with-validated-params connection
-                                                             new-user
-                                                             selected_dates
-                                                             user-login-info))))
+                         new-user (user-with-ids-from-user user user-from-db)
+                         booking-count-ok (validate-booking-count (or (:number_of_paid_bookings user-from-db) 0)
+                                                                  selected_dates)]
+                     (cond
+                       (nil? user-from-db) (error-reply 400 "No such user")
+                       (not booking-count-ok) (error-reply 400 "Bad count of bookings")
+                       :else (update-booking-with-validated-params connection
+                                                                   new-user
+                                                                   selected_dates
+                                                                   user-login-info))))
                  (catch PSQLException pse
                    (handle-psql-error pse))))))
 
@@ -316,4 +339,3 @@
     (if (nil? validated-id)
       (error-reply 400 "Invalid booking id")
       (admin-del-booking-with-validated-id validated-id user-login-info))))
-
