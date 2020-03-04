@@ -1,6 +1,5 @@
 (ns m-cal.test-utils
   (:require [clojure.test :refer [is]]
-            [clojure.data.json :refer [json-str read-str]]
             [ring.mock.request :as mock]
             [m-cal.handler :as handler]
             [m-cal.testing :as mcal-testing]
@@ -64,7 +63,7 @@
                  {"username" username
                   "password" password})
       :body
-      (read-str :key-fn keyword)
+      (json/read-str :key-fn keyword)
       :token))
 
 (defn add-test-booking
@@ -122,7 +121,7 @@
   [& [user-token]]
   (-> (get-all-bookings user-token)
       :body
-      (read-str :key-fn keyword)
+      (json/read-str :key-fn keyword)
       :all_bookings))
 
 (defn update-booking
