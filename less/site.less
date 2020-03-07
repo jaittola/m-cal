@@ -43,7 +43,7 @@ body {
     margin-right: @body_padding;
 }
 
-input, div, p, li, button {
+input, div, p, li, button, select {
     font-size: @font_size;
     font-family: @body_font_family;
 }
@@ -151,9 +151,31 @@ button:active {
     margin-bottom: @area_vertical_margin;
 }
 
+.paid_bookings_selection_area {
+    flex: 2 0 auto;
+    -ms-flex: 2 0 auto;
+    display: flex;
+    display: -ms-flexbox;
+    flex-flow: column;
+    -ms-flex-flow: column;
+}
+
+.paid_bookings_select {
+    margin: 7px 0 7px 0;
+}
+
+.remaining_bookings_text {
+    font-style: italic;
+    margin-left: 10px;
+}
+
 .contact_title {
     flex: 0 1 15em;
     -ms-flex: 0 1 15em;
+}
+
+.payment_select_title {
+    margin-right: 5px;
 }
 
 .selected_days_title {

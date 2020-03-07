@@ -31,6 +31,7 @@
                  :yacht_name ""
                  :user_private_id nil
                  :user_public_id nil
+                 :number_of_paid_bookings nil
                  :first_date nil
                  :last_date nil
                  :booked_dates []
@@ -85,7 +86,8 @@
          :email ""
          :phone ""
          :yacht_name ""
-         :user_public_id nil)
+         :user_public_id nil
+         :number_of_paid_bookings nil)
   (t/clear-user-token app-state))
 
 (defn clear-user-private-id []
@@ -111,7 +113,8 @@
            :yacht_name (:yacht_name user)
            :user_private_id (:secret_id user)
            :user_public_id (:id user)
-           :selected_dates selected-dates-with-cancellation)))
+           :selected_dates selected-dates-with-cancellation
+           :number_of_paid_bookings (:number_of_paid_bookings user))))
 
 (defn set-selected-dates [selected_dates]
   (swap! app-state assoc
@@ -143,6 +146,28 @@
   (clear-statuses)
   (set-booked-dates []))
 
+(defn required-bookings
+  [ratom]
+  (- (:required_days @ratom) (:number_of_paid_bookings @ratom)))
+
+(defn has-required-bookings? []
+  (>= (count (:selected_dates @app-state)) (required-bookings app-state)))
+
+(defn set-paid-bookings
+  [paid-booking-count]
+  (swap! app-state assoc
+         :number_of_paid_bookings paid-booking-count)
+  (let [sel-dates (->>
+                   (:selected_dates @app-state)
+                   (sort #(< (:date %1) (:date %2))))
+        required (required-bookings app-state)]
+    (when (> (count sel-dates) required)
+      (swap! app-state assoc
+             :selected_dates (take required sel-dates)))))
+
+(defn has-been-saved? []
+  (not-empty (:user_private_id @app-state)))
+
 (defn simple-input-validation [value]
   (let [string-len (count value)]
     (cond
@@ -171,7 +196,7 @@
                 (simple-input-validation (:yacht_name @ratom))
                 (email-input-validation (:email @ratom))
                 (phone-input-validation (:phone @ratom))])
-       (>= (count (:selected_dates @ratom)) (:required_days @ratom))))
+       (= (required-bookings ratom) (count (:selected_dates @ratom)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; HTTP calls to the booking API
@@ -221,7 +246,8 @@
                                   :yacht_name (:yacht_name @ratom)
                                   :selected_dates (map
                                                    #(:date %)
-                                                   (:selected_dates @ratom))}}
+                                                   (:selected_dates @ratom))
+                                  :number_of_paid_bookings (or (:number_of_paid_bookings @ratom) 0)}}
               request (if private-id
                         (http/put (str "/bookings/api/1/bookings/" private-id) body)
                         (http/post "/bookings/api/1/bookings" body))
@@ -269,7 +295,35 @@
     :bad "contact_input_bad"
     :good "contact_input"))
 
-(defn instructions []
+(defn remaining-bookings-text
+  [ratom]
+  (let [number-of-paid (:number_of_paid_bookings @ratom)
+        remaining (required-bookings ratom)]
+    (if (or (nil? number-of-paid)
+            (= 0 number-of-paid))
+      ""
+      [:<>
+       (if (= 0 remaining)
+         ""
+         [:div.remaining_bookings_text
+          (str "Suoritettavaksesi jää " remaining " vartiovuoro.")])
+       (if (> number-of-paid 0)
+         [:div.remaining_bookings_text "TÄHÄN EHKÄ HINTA. TODO."])])))
+
+(defn paid-or-bookings-chooser-text
+  [number-of-paid]
+  (if (or (nil? number-of-paid)
+          (= 0 number-of-paid))
+    "Suoritan vartiovuorot"
+    (str "Korvaan "
+         (case number-of-paid
+           1 "yhden vartiovuoron"
+           2 "kaksi vartiovuoroa"
+           (str number-of-paid "vartiovuoroa"))
+         " vartiomaksulla")))
+
+(defn instructions
+  [ratom]
   [:div.instruction_area
    [:h3 "Huomioitavaa"]
    [:ul
@@ -277,23 +331,48 @@
     "yövartijana Särkällä kahtena yönä purjehduskauden aikana."]
     [:li "Varatun vartiovuoron laiminlyönnistä laskutetaan voimassa "
      "olevan hinnaston mukainen maksu."]
-    [:li "Vuorovarauksia on voi muuttaa ennenn varattua vartiovuoroa. "
-     "Vuoroa ei kuitenkaan voi vaihtaa enää kahta päivää "
-     "ennen varattua päivää. Muutoksia juuri ennen vartiovuoroa "
-     "on syytä välttää, jottei Särkkä jää ilman vartijaa. "
-     "Toimiva vartiointi Särkällä on kaikkien veneenomistajien "
-     "etujen mukaista ja estää mm. myrskyvahinkoja."]]
+    [:li "Jos et pysty suorittamaan vartiovuoroja, voit maksaa "
+     "vartiointikorvauksen vartiovuoron sijaan."]
+    [:li "Vartiovuorovaraukset ovat sitovia eikä niitä voi muuttaa."]]
    [:h3 "Toimi näin"]
    [:ol
     [:li.instruction "Syötä nimesi, veneesi nimi ja yhteystietosi "
      "allaoleviin kenttiin. Yhteystietoja ei julkaista varauslistassa."]
-    [:li.instruction "Valitse kaksi vapaata vartiovuoroa."]
+    [:li.instruction "Jos haluat maksaa vartiointimaksun yövartioinnin, "
+     "sijaan, valitse korvattavien vartiovuorojen määrä "
+     "\"Vartiovuorojen korvaaminen vartiontimaksulla\" -valinnasta. "
+     "Vartiointimaksut laskutetaan sinulta. "]
+    [:li.instruction "Valitse vartiovuorot kalenterinäkymästä."]
     [:li.instruction "Paina \"Varaa valitsemasi vuorot\" -nappia."]
     [:li.instruction "Varausjärjestelmä lähettää sähköpostitse vahvistuksen "
-     "varauksestasi. Sähköpostiviestissä on WWW-linkki, jota voit käyttää "
-     "varauksiesi muokkaamiseen." ]
+     "varauksestasi. " ]
     ]]
   )
+
+(defn paid-or-bookings-chooser
+  [ratom]
+  (let [paid (:number_of_paid_bookings @ratom)
+        required (:required_days @ratom)]
+    [:div.paid_bookings_selection_area
+     (if (has-been-saved?)
+       [:div (paid-or-bookings-chooser-text paid)]
+       [:select.paid_bookings_select
+        {:on-change #(set-paid-bookings (-> % .-target .-value js/parseInt))
+         :value (or paid 0)}
+        (->>
+         (range 0 (inc required))
+         (map (fn [idx]
+                [:option {:value idx
+                          :key (str "paid-selection-" idx)}
+                 (paid-or-bookings-chooser-text idx)])))
+        ])
+     [remaining-bookings-text ratom]]))
+
+(defn paid-or-bookings-selection-area
+  [ratom]
+  [:div.contact_entry
+   [:div.contact_title "Vartiovuorojen korvaaminen vartiointimaksulla:"]
+   [paid-or-bookings-chooser ratom]])
 
 (defn contact_entry [ratom]
   [:div
@@ -326,6 +405,7 @@
              :value (:email @ratom)
              :on-change #(update-state-from-text-input :email %)}]
     ]
+   [paid-or-bookings-selection-area ratom]
    ])
 
 (defn selected_day [day]
@@ -402,9 +482,6 @@
      (filter #(== (:date %) isoday))
      (first))))
 
-(defn has-required-bookings? []
-  (>= (count (:selected_dates @app-state)) (:required_days @app-state)))
-
 (defn booking-or-free [today-iso daydata ratom] ""
   (let [booking (:booking daydata)
         day (:day daydata)
@@ -462,7 +539,7 @@
      [logout-link]
      [:h1 "Merenkävijät ry"]
      [:h2 "Särkän vartiovuorojen varaukset"]
-     [instructions]
+     [instructions ratom]
      [contact_entry ratom]
      [selection_area ratom]
      [selection_button_area ratom]
