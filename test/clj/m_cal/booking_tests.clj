@@ -373,3 +373,42 @@
         bookings-after-delete (test-utils/get-all-booking-values user-token)]
     (is (= 401 (:status del-response)))
     (is (= 2 (count bookings-after-delete)))))
+
+(deftest admin-list-all-users
+  (let [admin-token (admin-login)
+        user-token (user-login)
+        _ (test-utils/add-test-booking-successfully {:name "Teijo Tuuliviiri"
+                                                     :yacht_name "s/y windex"
+                                                     :email "teijo@example.com"
+                                                     :phone "040333333434"
+                                                     :selected_dates ["2019-04-11"]
+                                                     :number_of_paid_bookings 1}
+                                                    user-token)
+        _ (test-utils/add-test-booking-successfully {:name "Turkka Tarkkaavainen"
+                                                     :yacht_name "s/y View"
+                                                     :email "turkka@example.com"
+                                                     :phone "040333332211"
+                                                     :selected_dates ["2019-04-12" "2019-04-13"]}
+                                                    user-token)
+        body (test-utils/get-all-users-admin-successfully-parsed-body admin-token)
+        users (:users body)
+        teijo (first users)
+        turkka (nth users 1)]
+    (is (= 2 (count users)))
+    (is (= "Teijo Tuuliviiri" (:name teijo)))
+    (is (= 1 (:number_of_paid_bookings teijo)))
+    (is (= "Turkka Tarkkaavainen\" (:name turkka)"))
+    (is (nil? (:number_of_paid_bookings turkka)))))
+
+(deftest admin-list-all-users-not-available-with-user-token
+  (let [user-token (user-login)]
+    (test-utils/add-test-booking-successfully {:name "Teijo Tuuliviiri"
+                                               :yacht_name "s/y windex"
+                                               :email "teijo@example.com"
+                                               :phone "040333333434"
+                                               :selected_dates ["2019-04-11"]
+                                               :number_of_paid_bookings 1}
+                                              user-token)
+    (is (= 401 (->
+                (test-utils/get-all-users-admin user-token)
+                :status)))))

@@ -57,13 +57,18 @@
        (map vec)
        (into m)))
 
+(defn extract-json-body
+  [http-response]
+  (-> http-response
+      (:body)
+      (json/read-str :key-fn keyword)))
+
 (defn login
   [username password]
   (-> (http-post "/api/1/login"
                  {"username" username
                   "password" password})
-      :body
-      (json/read-str :key-fn keyword)
+      (extract-json-body)
       :token))
 
 (defn add-test-booking
@@ -81,8 +86,7 @@
 (defn add-test-booking-successfully-parsed-body
   [booking user-token]
   (-> (add-test-booking-successfully booking user-token)
-      (:body)
-      (json/read-str :key-fn keyword)))
+      (extract-json-body)))
 
 (defn add-test-booking-unchecked
   [booking]
@@ -120,8 +124,7 @@
   "Underscores, argh"
   [& [user-token]]
   (-> (get-all-bookings user-token)
-      :body
-      (json/read-str :key-fn keyword)
+      (extract-json-body)
       :all_bookings))
 
 (defn update-booking
@@ -139,5 +142,14 @@
 (defn update-booking-successfully-parsed-body
   [secret-id booking user-token]
   (-> (update-booking-successfully secret-id booking user-token)
-      (:body)
-      (json/read-str :key-fn keyword)))
+      (extract-json-body)))
+
+(defn get-all-users-admin
+  [admin-token]
+  (http-get "/admin/api/1/all_users" admin-token))
+
+(defn get-all-users-admin-successfully-parsed-body
+  [admin-token]
+  (let [response (get-all-users-admin admin-token)]
+    (is (= 200 (:status response)))
+    (extract-json-body response)))

@@ -144,6 +144,20 @@ FROM users u
 LEFT JOIN user_booking_selections ubs ON ubs.users_id = u.id
 WHERE u.id = :id;
 
+-- :name db-list-all-users :? :*
+-- :doc List all users, including booking selections
+SELECT
+u.id,
+u.secret_id,
+u.username AS name,
+u.yachtname AS yacht_name,
+u.email,
+u.phone,
+ubs.number_of_paid_bookings
+FROM users u
+LEFT JOIN user_booking_selections ubs ON ubs.users_id = u.id
+ORDER BY name;
+
 -- :name db-delete-booking :! :n
 -- :doc Delete bookings from database
 DELETE FROM booking

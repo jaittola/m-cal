@@ -103,6 +103,13 @@
   {:body {:all_bookings (load-all-bookings-for-admin)
           :calendar_config (config/calendar-config)}})
 
+(defn admin-list-users []
+  (try (jdbc/with-db-connection [connection @db-common/dbspec]
+          {:status 200
+           :body {:users (db-list-all-users connection)}})
+       (catch PSQLException pse
+         (handle-psql-error pse))))
+
 (defn list-bookings-with-user [id]
   (if
       (nil? id) (error-reply 400 "Mandatory parameters missing.")
