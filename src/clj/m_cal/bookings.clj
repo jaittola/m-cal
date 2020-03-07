@@ -115,8 +115,8 @@
   (if
       (nil? id) (error-reply 400 "Mandatory parameters missing.")
       (try (jdbc/with-db-transaction [connection @db-common/dbspec]
-             (let [user-with-ids (first (db-find-user-by-secret-id connection
-                                                                   {:secret_id (UUID/fromString id)}))
+             (let [user-with-ids (db-find-user-by-secret-id connection
+                                                            {:secret_id (UUID/fromString id)})
                    selected-dates (database-get-user-selections connection (:id user-with-ids))]
                (if (nil? user-with-ids) (error-reply 400 "No such user")
                    (success-booking-reply connection
@@ -281,7 +281,7 @@
                                                                 {:id id}))
                user-id (:users_id booking)
                user-with-ids (when user-id
-                               (first (db-find-user-by-id connection {:id user-id})))]
+                               (db-find-user-by-id connection {:id user-id}))]
            (if (and booking user-with-ids)
              (do
                (db-delete-booking connection {:ids [id]})
@@ -335,8 +335,8 @@
       validation-error (error-reply 400 validation-error)
       (nil? secret_id) (error-reply 400 "Mandatory parameters missing.")
       :else (try (jdbc/with-db-transaction [connection @db-common/dbspec]
-                   (let [user-from-db (first (db-find-user-by-secret-id connection
-                                                                        {:secret_id (UUID/fromString secret_id)}))
+                   (let [user-from-db (db-find-user-by-secret-id connection
+                                                                 {:secret_id (UUID/fromString secret_id)})
                          new-user (user-with-ids-from-user user user-from-db)
                          booking-count-ok (validate-booking-count (or (:number_of_paid_bookings user-from-db) 0)
                                                                   selected_dates)]
@@ -368,7 +368,7 @@
                                                                  db-common/log-entry-admin-booking-params-modify
                                                                  (:user_login_id user-login-info))
              {:status 200
-              :body {:user (first (db-find-user-by-id connection {:id (:id updated-user)}))}})
+              :body {:user (db-find-user-by-id connection {:id (:id updated-user)})}})
            (error-reply 400 "User not found")))
        (catch PSQLException pse
          (handle-psql-error pse))))

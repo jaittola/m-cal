@@ -125,7 +125,7 @@ TO_CHAR(booked_date, 'YYYY-MM-DD') AS booked_date
 FROM booking
 WHERE users_id = :user_id;
 
--- :name db-find-user-by-secret-id :? :*
+-- :name db-find-user-by-secret-id :query :one
 -- :doc Find user by secret id. Return data compatible with UserWithIDs records.
 SELECT
 u.id,
@@ -139,7 +139,7 @@ FROM users u
 LEFT JOIN user_booking_selections ubs ON ubs.users_id = u.id
 WHERE u.secret_id = :secret_id;
 
--- :name db-find-user-by-id :? :*
+-- :name db-find-user-by-id :query :one
 -- :doc "Find user by sequential id. Return data compatiable with UserWithIDs records.
 SELECT
 u.id,
