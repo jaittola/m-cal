@@ -64,7 +64,7 @@
                                                 user-details
                                                 op
                                                 & [user-login-id]]
-  (let [user-data (select-keys user-details [:name :yacht_name :phone :email])]
+  (let [user-data (select-keys user-details [:name :yacht_name :phone :email :number_of_paid_bookings])]
     (db-insert-booking-log connection
                            {:booked_date nil
                             :users_id (:id user-details)
