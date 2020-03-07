@@ -99,6 +99,15 @@ number_of_paid_bookings = :number_of_paid_bookings,
 timestamp = NOW()
 WHERE users_id = :user_id;
 
+-- :name db-upsert-booking-selections-for-admin :! :n
+-- :doc Insert or update user's booking selections. Meant for admins.
+INSERT INTO user_booking_selections
+(users_id, number_of_paid_bookings)
+VALUES (:id, :number_of_paid_bookings)
+ON CONFLICT (users_id) DO UPDATE SET
+number_of_paid_bookings = :number_of_paid_bookings,
+timestamp = NOW();
+
 -- :name db-select-user-bookings-for-update :? :*
 -- :doc Find user's bookings for updating.
 SELECT

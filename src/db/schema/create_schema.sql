@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS user_booking_selections (
        user_booking_selections_id SERIAL PRIMARY KEY,
        timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
-       users_id INTEGER NOT NULL REFERENCES users (id),
+       users_id INTEGER NOT NULL REFERENCES users (id) UNIQUE,
        number_of_paid_bookings INTEGER NOT NULL
 );
 

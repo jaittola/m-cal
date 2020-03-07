@@ -412,3 +412,30 @@
     (is (= 401 (->
                 (test-utils/get-all-users-admin user-token)
                 :status)))))
+
+(deftest admin-update-user
+  (let [user {:name "Teijo Tuuliviiri"
+              :yacht_name "s/y windex"
+              :email "teijo@example.com"
+              :phone "040333333434"
+              :selected_dates ["2019-04-11"]
+              :number_of_paid_bookings 1}
+        admin-token (admin-login)
+        user-token (user-login)
+        user-with-booking (test-utils/add-test-booking-successfully-parsed-body user
+                                                                                user-token)
+        user-id (-> user-with-booking :user :id)
+        user-for-update (-> user
+                            (assoc :number_of_paid_bookings 0)
+                            (assoc :email "teijo2@example.com")
+                            (dissoc :selected_dates))
+        update-result (test-utils/update-user-admin user-id
+                                                    user-for-update
+                                                    admin-token)
+        update-result-body (try
+                             (test-utils/extract-json-body update-result)
+                             (catch Exception _ nil))]
+    (is (= 200 (:status update-result)))
+    (is (= user-for-update (-> update-result-body
+                               :user
+                               (select-keys [:name :yacht_name :email :phone :number_of_paid_bookings]))))))

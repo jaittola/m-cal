@@ -153,3 +153,9 @@
   (let [response (get-all-users-admin admin-token)]
     (is (= 200 (:status response)))
     (extract-json-body response)))
+
+(defn update-user-admin
+  [user-id user-details admin-token]
+  (http-put (str "/admin/api/1/user/" user-id)
+            user-details
+            admin-token))

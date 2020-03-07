@@ -57,6 +57,8 @@
 
 (defroutes admin-routes
   (GET "/api/1/all_users" [] (bookings/admin-list-users))
+  (PUT "/api/1/user/:id" [id :as {body :body user-info :user-info}]
+       (bookings/admin-update-user id body user-info))
   (GET "/api/1/all_bookings" [] (bookings/admin-list-bookings))
   (GET "/api/1/event_log" [] (bookings/admin-list-eventlog))
   (DELETE "/api/1/booking/:id" [id :as {user-info :user-info}]

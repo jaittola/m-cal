@@ -15,6 +15,7 @@
 (defrecord User [name yacht_name phone email])
 (defrecord UserWithIDs [name yacht_name phone email id secret_id number_of_paid_bookings])
 (defrecord BookingValidation [user selected_dates validation-error])
+(defrecord UserValidation [user validation-error])
 
 ;; Note: This function needs to be rewritten. It is used in strange
 ;; and inconsistent ways from various locations.
@@ -162,10 +163,13 @@
                            #(re-matches local-date-string-regex %)))
 (s/def ::selected_dates (s/coll-of ::local-date))
 (s/def ::number_of_paid_bookings int?)
+(s/def ::user-for-booking (s/keys :req-un [::name ::yacht_name ::email ::phone]
+                                  :opt-un [::number_of_paid_bookings]))
 (s/def ::booking (s/keys :req-un [::name ::yacht_name ::email ::phone ::selected_dates]
                          :opt-un [::number_of_paid_bookings]))
 
 (def int-validator (validation/spec-validator-simple ::is-integer))
+(def user-for-booking-spec-validator (validation/spec-validator ::user-for-booking))
 (def booking-spec-validator (validation/spec-validator ::booking))
 (def booking-date-parser-validator (validation/assert-validator
                                      (fn [params]
@@ -185,6 +189,12 @@
         {:keys [selected_dates :m-cal.validation/validation-error]} validation-result
         user (map->User validation-result)]
     (->BookingValidation user selected_dates validation-error)))
+
+(defn validate-user-for-booking-input [params]
+  (let [validation-result (user-for-booking-spec-validator params)
+        validation-error (:m-cal.validation/validation-error validation-result)
+        user (map->User validation-result)]
+    (->UserValidation user validation-error)))
 
 (defn validate-int [input-int]
   (some-> input-int
@@ -346,3 +356,32 @@
     (if (nil? validated-id)
       (error-reply 400 "Invalid booking id")
       (admin-del-booking-with-validated-id validated-id user-login-info))))
+
+(defn admin-update-user-with-validated-params
+  [updated-user user-login-info]
+  (try (jdbc/with-db-connection [connection @db-common/dbspec]
+         (if (db-update-user connection updated-user)
+           (do
+             (db-upsert-booking-selections-for-admin connection updated-user)
+             (db-common/database-insert-booking-log-without-date connection
+                                                                 updated-user
+                                                                 db-common/log-entry-admin-booking-params-modify
+                                                                 (:user_login_id user-login-info))
+             {:status 200
+              :body {:user (first (db-find-user-by-id connection {:id (:id updated-user)}))}})
+           (error-reply 400 "User not found")))
+       (catch PSQLException pse
+         (handle-psql-error pse))))
+
+(defn admin-update-user [id updated-user user-login-info]
+  (let [{:keys [user validation-error]} (validate-user-for-booking-input updated-user)
+        user-with-id (assoc user :id (parse-int id))
+        paid-bookings (or (:number_of_paid_bookings user) 0)
+        paid-bookings-count-bad (or
+                                 (< paid-bookings 0)
+                                 (> paid-bookings (config/required-days)))]
+    (cond
+      validation-error (error-reply 400 validation-error)
+      paid-bookings-count-bad (error-reply 400 "Incorrect paid booking count")
+      :else (admin-update-user-with-validated-params user-with-id
+                                                     user-login-info))))
