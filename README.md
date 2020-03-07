@@ -257,7 +257,7 @@ To develop the admin UI, set HAS_ADMIN_UI=1 (and other environment
 variables as appropriate), and run
 
 ```
-lein figwheel dev-admin-dev
+lein figwheel admin-dev
 ```
 
 ## Production Build
