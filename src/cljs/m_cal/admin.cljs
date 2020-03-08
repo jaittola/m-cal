@@ -156,7 +156,10 @@
    (:name userdata) [:br]
    (:yacht_name userdata) [:br]
    (:phone userdata) [:br]
-   (:email userdata) [:br]])
+   (:email userdata) [:br]
+   (if-let [paid (:number_of_paid_bookings userdata)]
+     [:<> (str "Maksettuja vuoroja " paid) [:br]]
+     "")])
 
 (defn booking-or-free [today daydata ratom] ""
   (let [booking (:booking daydata)
