@@ -310,12 +310,17 @@
                    bookings-ids (database-insert-bookings connection
                                                           selected_dates
                                                           user-id)
-                   user-details (user-with-ids-from-user user user-id)
-                   _ (db-common/database-insert-booking-log connection
-                                                            bookings-ids
-                                                            user-details
-                                                            db-common/log-entry-booking-book
-                                                            user-login-id)]
+                   user-details (user-with-ids-from-user user user-id)]
+               (if (> (count bookings-ids) 0)
+                 (db-common/database-insert-booking-log connection
+                                                        bookings-ids
+                                                        user-details
+                                                        db-common/log-entry-booking-book
+                                                        user-login-id)
+                 (db-common/database-insert-booking-log-without-date connection
+                                                                     user-details
+                                                                     db-common/log-entry-contact-update
+                                                                     user-login-id))
                (when (> number-of-paid-bookings 0)
                  (db-insert-booking-selections connection
                                                {:user_id (:id user-id)
