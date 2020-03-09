@@ -44,31 +44,33 @@
                   (format "//%s%s" host path)
                   (format "//%s:%s%s" host port path))}))))
 
+(defn user-data-for-store
+  [user-details]
+  (select-keys user-details [:name :yacht_name :phone :email :number_of_paid_bookings]))
+
 (defn database-insert-booking-log [connection
                                    dates-to-booking-ids
                                    user-details
                                    op
                                    & [user-login-id]]
-  (let [user-data (select-keys user-details [:name :yacht_name :phone :email])]
-    (doall (map (fn [id-date]
-                  (db-insert-booking-log connection
-                                         {:booked_date (:booked_date id-date)
-                                          :users_id (:id user-details)
-                                          :booking_id (:booking_id id-date)
-                                          :operation op
-                                          :user_data user-data
-                                          :user_login_id user-login-id}))
-                dates-to-booking-ids))))
+  (doall (map (fn [id-date]
+                (db-insert-booking-log connection
+                                       {:booked_date (:booked_date id-date)
+                                        :users_id (:id user-details)
+                                        :booking_id (:booking_id id-date)
+                                        :operation op
+                                        :user_data (user-data-for-store user-details)
+                                        :user_login_id user-login-id}))
+              dates-to-booking-ids)))
 
 (defn database-insert-booking-log-without-date [connection
                                                 user-details
                                                 op
                                                 & [user-login-id]]
-  (let [user-data (select-keys user-details [:name :yacht_name :phone :email :number_of_paid_bookings])]
-    (db-insert-booking-log connection
-                           {:booked_date nil
-                            :users_id (:id user-details)
-                            :booking_id nil
-                            :operation op
-                            :user_data user-data
-                            :user_login_id user-login-id})))
+  (db-insert-booking-log connection
+                         {:booked_date nil
+                          :users_id (:id user-details)
+                          :booking_id nil
+                          :operation op
+                          :user_data (user-data-for-store user-details)
+                          :user_login_id user-login-id}))
