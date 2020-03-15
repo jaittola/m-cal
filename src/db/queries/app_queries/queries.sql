@@ -162,9 +162,13 @@ u.username AS name,
 u.yachtname AS yacht_name,
 u.email,
 u.phone,
-ubs.number_of_paid_bookings
+ubs.number_of_paid_bookings,
+COALESCE(json_agg(b.booked_date) FILTER (WHERE b.booked_date IS NOT NULL),
+         '[]'::json) AS selected_dates
 FROM users u
 LEFT JOIN user_booking_selections ubs ON ubs.users_id = u.id
+LEFT JOIN booking b ON u.id = b.users_id
+GROUP BY 1, 2, 3, 4, 5, 6, 7
 ORDER BY name;
 
 -- :name db-delete-booking :! :n

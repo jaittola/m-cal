@@ -390,15 +390,26 @@
                                                      :phone "040333332211"
                                                      :selected_dates ["2019-04-12" "2019-04-13"]}
                                                     user-token)
+        _ (test-utils/add-test-booking-successfully {:name "Reino Rahamies"
+                                                     :yacht_name "s/y Well off"
+                                                     :email "reiska@example.com"
+                                                     :phone "0409999999"
+                                                     :selected_dates []
+                                                     :number_of_paid_bookings 2}
+                                                    user-token)
         body (test-utils/get-all-users-admin-successfully-parsed-body admin-token)
         users (:users body)
-        teijo (first users)
-        turkka (nth users 1)]
-    (is (= 2 (count users)))
+        reino (first users)
+        teijo (nth users 1)
+        turkka (nth users 2)]
+    (is (= 3 (count users)))
     (is (= "Teijo Tuuliviiri" (:name teijo)))
     (is (= 1 (:number_of_paid_bookings teijo)))
+    (is (= ["2019-04-11"]  (:selected_dates teijo)))
     (is (= "Turkka Tarkkaavainen\" (:name turkka)"))
-    (is (nil? (:number_of_paid_bookings turkka)))))
+    (is (nil? (:number_of_paid_bookings turkka)))
+    (is (= ["2019-04-12" "2019-04-13"] (:selected_dates turkka)))
+    (is (= [] (:selected_dates reino)))))
 
 (deftest admin-list-all-users-not-available-with-user-token
   (let [user-token (user-login)]
